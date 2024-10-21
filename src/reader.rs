@@ -6,17 +6,24 @@ use crate::lending_iterator::LendingIterator;
 // TODO: Clone
 /// Lending reader return `&T`.
 ///
-/// It does not clone value before returning.
+/// This is faster than [EventReader], since it does not clone `T` before return.
 /// 
-/// This is faster then [EventReader] and does not require `T`
-/// to be [Clone]able.  
-pub struct LendingEventReader<T>{
+/// # Design choices
+/// 
+/// The value returned by the reader lives as long as the block where it is stored.
+/// From the reader's point of view, we can guarantee that the value remains valid
+/// as long as the block does not change. However, in Rust, we cannot make such 
+/// granular guarantees. Instead, we guarantee that the value remains valid until the
+/// reader is mutated. This means the value is guaranteed to live until the next 
+/// read operation, at which point the block may change, and the old block could 
+/// be destructed.
+pub struct LendingReader<T>{
     pub(crate) block: BlockArc<T>,
     pub(crate) index: usize,
     pub(crate) len  : usize,
 }
 
-impl<T> LendingIterator for LendingEventReader<T>{
+impl<T> LendingIterator for LendingReader<T>{
     type Item<'a> = &'a T where Self: 'a;
 
     #[inline]

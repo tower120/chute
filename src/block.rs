@@ -7,7 +7,7 @@ use std::ptr::{null_mut, NonNull};
 use std::sync::atomic::{AtomicPtr, AtomicU64, AtomicUsize, Ordering};
 use branch_hints::unlikely;
 
-pub(crate) const BLOCK_SIZE: usize = 40;
+pub(crate) const BLOCK_SIZE: usize = 4096;
 
 #[derive(Default, Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Packed {
@@ -16,12 +16,14 @@ pub(crate) struct Packed {
     pub(crate) writers     : u32
 }
 impl From<Packed> for u64 {
+    #[inline]
     fn from(value: Packed) -> Self {
         value.occupied_len as u64
         + ((value.writers as u64) << 32) 
     }
 }
 impl From<u64> for Packed {
+    #[inline]
     fn from(value: u64) -> Self {
         Self{
             occupied_len: value as u32,
@@ -227,15 +229,18 @@ pub(crate) struct BlockArc<T> {
 }
 unsafe impl<T> Send for BlockArc<T> {}
 impl<T> BlockArc<T>{
+    #[inline]
     pub unsafe fn from_raw(ptr: NonNull<Block<T>>) -> Self {
         Self{ptr}
     }
     
+    #[inline]
     pub fn into_raw(self) -> NonNull<Block<T>> {
         let this = ManuallyDrop::new(self);
         this.ptr
     }
     
+    #[inline]
     pub fn as_non_null(&self) -> NonNull<Block<T>> {
         self.ptr
     }
@@ -243,11 +248,13 @@ impl<T> BlockArc<T>{
 impl<T> Deref for BlockArc<T> {
     type Target = Block<T>;
 
+    #[inline]
     fn deref(&self) -> &Self::Target {
         unsafe{ self.ptr.as_ref() }
     }
 }
 impl<T> Clone for BlockArc<T> {
+    #[inline]
     fn clone(&self) -> Self {
         unsafe{
             Block::inc_use_count(self.ptr)
@@ -256,6 +263,7 @@ impl<T> Clone for BlockArc<T> {
     }
 }
 impl<T> Drop for BlockArc<T> {
+    #[inline]
     fn drop(&mut self) {
         unsafe{
             Block::dec_use_count(self.ptr)

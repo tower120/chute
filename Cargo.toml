@@ -5,4 +5,11 @@ edition = "2021"
 
 [dependencies]
 branch_hints = "0.4"
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
 spin = "0.9.8"
+
+[[bench]]
+name = "mp_vs_sp_write"
+harness = false

@@ -1,16 +1,20 @@
+//! Multi-producer, multi-consumer.
+//! 
+//! Thread-safe lockless writers and readers.
+
 use std::ops::Deref;
 use std::ptr::{null_mut, NonNull};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicPtr, Ordering};
 use crate::block::{Block, BlockArc, BLOCK_SIZE};
 use crate::lending_iterator::LendingIterator;
-use crate::reader::LendingEventReader;
+use crate::reader::LendingReader;
 
-pub struct EventQueue<T> {
+pub struct Queue<T> {
     last_block: AtomicPtr<Block<T>>,
 }
 
-impl<T> Default for EventQueue<T> {
+impl<T> Default for Queue<T> {
     #[inline]
     fn default() -> Self {
         Self {
@@ -19,7 +23,7 @@ impl<T> Default for EventQueue<T> {
     }
 }
 
-impl<T> EventQueue<T> {
+impl<T> Queue<T> {
     #[must_use]
     #[inline]
     pub fn new() -> Arc<Self> {
@@ -58,12 +62,14 @@ impl<T> EventQueue<T> {
         arc
     }
     
-    /// Returns the latest block. That SHOULD be non-full.
+    /// Returns (latest block, inserted). 
+    /// 
+    /// Latest block SHOULD be non-full. But the statement could fail.
     /// 
     /// Blocking.
     #[must_use]
-    #[inline(never)]
-    fn insert_block(&self) -> BlockArc<T> {
+    #[inline]
+    fn insert_block(&self) -> (BlockArc<T>, bool) {
         // 1. Lock
         let last_block = unsafe{ self.lock_last_block().as_mut() };
         
@@ -80,7 +86,7 @@ impl<T> EventQueue<T> {
             // unlock
             self.unlock_last_block(last_block);
             
-            return arc;
+            return (arc, false);
         } 
         
         // 2. Make new block
@@ -104,8 +110,40 @@ impl<T> EventQueue<T> {
         
         // 5. Set new block as last, and release lock.
         self.unlock_last_block(new_block);
-        
-        unsafe{ BlockArc::from_raw(new_block) }
+
+        (unsafe{ BlockArc::from_raw(new_block) }, true)
+    }
+    
+    /// Push value to queue.
+    /// 
+    /// This is a blocking operation - you can't [push()] simultaneously from
+    /// different threads, but most of the time writers can push in parallel
+    /// with this call. 
+    /// 
+    /// A little bit faster than a
+    /// constructing writer just to push a single value
+    /// `writer().push(..)`. But slower than [Writer::push] itself.
+    /// 
+    /// Use it if you need to occasionally push a single value.
+    #[inline]
+    pub fn push(&self, value: T){
+        let block = self.lock_last_block();
+        if let Err(value) = unsafe{ block.as_ref() }.try_push(value) {
+            #[cold]
+            #[inline(never)]
+            fn insert_block_and_push<T>(this: &Queue<T>, value: T){
+                let (block, inserted) = this.insert_block();
+                if !inserted{
+                    unsafe{ std::hint::unreachable_unchecked() }
+                }
+                let result = block.try_push(value);
+                if result.is_err(){
+                    unsafe{ std::hint::unreachable_unchecked() }
+                }
+            }
+            insert_block_and_push(self, value);
+        }
+        self.unlock_last_block(block);
     }
     
     #[must_use]
@@ -119,20 +157,19 @@ impl<T> EventQueue<T> {
     
     #[must_use]
     #[inline]
-    pub fn lending_reader(&self) -> LendingEventReader<T> {
+    pub fn lending_reader(&self) -> LendingReader<T> {
         let last_block = self.load_last_block();
         let block_len = unsafe {
             last_block.len.load(Ordering::Acquire)  
         };
-        LendingEventReader {
+        LendingReader {
             block: last_block,
-            
             index: block_len,
             len:   block_len,
         }
     }
 }
-impl<T> Drop for EventQueue<T> {
+impl<T> Drop for Queue<T> {
     fn drop(&mut self) {
         let last_block = self.last_block.load(Ordering::Acquire);
         unsafe{
@@ -142,11 +179,12 @@ impl<T> Drop for EventQueue<T> {
     }
 }
 
+/// Queue writer.
 ///
-/// Same as Reader, Writer internally keeps a block pointer. 
+/// Same as reader, writer internally keeps a block pointer. 
 pub struct Writer<T> {
     block: BlockArc<T>,
-    event_queue: Arc<EventQueue<T>>
+    event_queue: Arc<Queue<T>>
 } 
 impl<T> Writer<T> {
     #[inline]
@@ -204,7 +242,7 @@ impl<T> Writer<T> {
     fn insert_block_and_push(&mut self, mut value: T){
         // TODO: try load next first? 
         loop{
-            self.block = self.event_queue.insert_block();
+            (self.block, _) = self.event_queue.insert_block();
             
             let inserted = self.block.try_push(value);
             if let Err(v) = inserted {
@@ -215,6 +253,7 @@ impl<T> Writer<T> {
         }
     }    
 
+    // TODO: return something, signaling that queue len was increased.
     #[inline]
     pub fn push(&mut self, value: T) {
         let inserted = self.block.try_push(value);
@@ -229,11 +268,11 @@ mod test_mpmc{
     use std::sync::Arc;
     use std::sync::atomic::{AtomicUsize, Ordering};
     use crate::lending_iterator::LendingIterator;
-    use crate::queue::EventQueue;
+    use crate::mpmc::Queue;
 
     #[test]
     fn test_event_queue() {
-        let queue: Arc<EventQueue<usize>> = Default::default();
+        let queue: Arc<Queue<usize>> = Default::default();
         let mut reader = queue.lending_reader();
         let mut writer = queue.writer();
         
@@ -248,7 +287,7 @@ mod test_mpmc{
     
     #[test]
     fn test_event_queue_mt() {
-        let queue: Arc<EventQueue<usize>> = Default::default();
+        let queue: Arc<Queue<usize>> = Default::default();
         let mut reader0 = queue.lending_reader();
         let mut reader1 = queue.lending_reader();
         let mut writer0 = queue.writer();
