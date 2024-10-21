@@ -1,0 +1,8 @@
+[package]
+name = "event_queue"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+branch_hints = "0.4"
+spin = "0.9.8"
