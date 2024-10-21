@@ -191,7 +191,7 @@ impl<T> Block<T>{
                     Ordering::AcqRel
                 ).into();
                 
-                if writers == 1 {
+                if unlikely(writers == 1) {
                     debug_assert_eq!(occupied_len - 1, BLOCK_SIZE as _ );
                     self.len.store(BLOCK_SIZE, Ordering::Release);
                 }             
@@ -203,7 +203,7 @@ impl<T> Block<T>{
         unsafe{
             let mem = &mut *self.mem.get();
             let index = occupied_len;
-            mem[index].write(value);
+            mem.get_unchecked_mut(index).write(value);
         }
         
         // Just Release?

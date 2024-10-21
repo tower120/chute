@@ -4,8 +4,10 @@
 //! 
 //! Wrapping it in `Arc<Mutex>` will make it multi-producer. 
 
+use std::ops::Deref;
 use std::sync::atomic::Ordering;
-use crate::block::{Block, BlockArc};
+use branch_hints::unlikely;
+use crate::block::{Block, BlockArc, BLOCK_SIZE};
 use crate::reader::LendingReader;
 
 pub struct Queue<T>{
@@ -27,7 +29,8 @@ impl<T> Queue<T> {
         Default::default()
     }
     
-    #[inline]
+    #[cold]
+    #[inline(never)]
     fn insert_block(&mut self) {
         // 1. Make new block
         //    +1 counter for EventQueue::last_block
@@ -43,19 +46,19 @@ impl<T> Queue<T> {
     
     #[inline]
     pub fn push(&mut self, value: T) {
-        let result = self.last_block.try_push(value);
-        if let Err(value) = result {
-            #[cold]
-            #[inline(never)]
-            fn insert_block_and_push<T>(this: &mut Queue<T>, value: T) {
-                this.insert_block();
-                let result = this.last_block.try_push(value);
-                if let Err(_) = result {
-                    unsafe{ std::hint::unreachable_unchecked() }
-                }
-            }
-            insert_block_and_push(self, value);
+        let mut len = self.last_block.len.load(Ordering::Relaxed);
+        if unlikely(len == BLOCK_SIZE) {
+            self.insert_block();
+            len = 0;
         }
+        
+        let last_block = unsafe{ self.last_block.as_non_null().as_mut() };
+        unsafe{
+            let mem = &mut *last_block.mem.get();
+            mem.get_unchecked_mut(len).write(value);
+        }
+        
+        last_block.len.store(len+1, Ordering::Release);
     }
     
     #[must_use]

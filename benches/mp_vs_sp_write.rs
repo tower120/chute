@@ -5,6 +5,15 @@ use event_queue::{mpmc, spmc};
 
 const THREADS: usize = 4;
 
+const N: usize = 4;
+struct Value([usize; N]);
+impl From<usize> for Value{
+    #[inline]
+    fn from(value: usize) -> Self {
+        Self([value; N])
+    }
+}
+
 fn mpmc_write(n: usize) {
     let mut queue = mpmc::Queue::new();
     
@@ -13,7 +22,7 @@ fn mpmc_write(n: usize) {
         let mut writer = queue.writer();
         joins.push(std::thread::spawn(move || {
             for i in 0..n {
-                writer.push(i);
+                writer.push(Value::from(i));
             }
         }));
     }
@@ -31,7 +40,7 @@ fn spmc_write(n: usize) {
         let mut queue = queue.clone();
         joins.push(std::thread::spawn(move || {
             for i in 0..n {
-                queue.lock().push(i);
+                queue.lock().push(Value::from(i));
             }
         }));
     }
