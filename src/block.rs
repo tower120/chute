@@ -62,23 +62,32 @@ fn test_pack_sub(){
     assert_eq!(writers, 0);
 }
 
+#[derive(Default)]
+#[repr(align(64))]
+pub(crate) struct CacheLineAlign<T>(T);
+impl<T> Deref for CacheLineAlign<T>{
+    type Target = T;
+    
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+//#[repr(C)]
 pub(crate) struct Block<T> {
-    pub mem : UnsafeCell<[MaybeUninit<T>; BLOCK_SIZE]>,
     /// `len` is synchronization point for `mem`.
     /// After we write to `mem`, we store `len` with "Release".
     /// Before we read from `mem`, we load `len` with "Acquire".
     /// In analogy with spin-lock synchronization.
-    pub len : AtomicUsize,
-    packed: AtomicU64,
+    // Aligning with cache-line size gives us +10% perf.
+    pub len : CacheLineAlign<AtomicUsize>,
+    packed  : AtomicU64,
     use_count : AtomicUsize,           // When decreases to 0 - frees itself
     pub next  : AtomicPtr<Self>,
     
-    // TODO: remove
-    /// Purely for debug purposes
-    pub id: usize,
+    pub mem : UnsafeCell<[MaybeUninit<T>; BLOCK_SIZE]>,
 }
-
-
 
 impl<T> Block<T>{
     #[must_use]
@@ -90,12 +99,10 @@ impl<T> Block<T>{
                 handle_alloc_error(layout);
             }
 
-            (*ptr).len = AtomicUsize::new(0);
+            (*ptr).len = Default::default();
             (*ptr).packed = Default::default();
             (*ptr).use_count = AtomicUsize::new(counter);
             (*ptr).next = AtomicPtr::new(null_mut());
-            
-            (*ptr).id = 0;
         
             BlockArc::from_raw(NonNull::new_unchecked(ptr))
         }

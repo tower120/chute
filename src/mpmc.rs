@@ -95,11 +95,6 @@ impl<T> Queue<T> {
         //    +1 counter for returned BlockArc 
         let mut new_block = Block::with_counter(3).into_raw();
 
-        // Debug
-        unsafe {
-            new_block.as_mut().id = last_block.id + 1;
-        }
-        
         // 3. Connect new block with old
         last_block.next.store(new_block.as_ptr(), Ordering::Release);
         
