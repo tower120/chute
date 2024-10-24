@@ -9,7 +9,13 @@ branch_hints = "0.4"
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }
 spin = "0.9.8"
+arrayvec = "0.7"
+crossbeam = "0.8"
 
 [[bench]]
 name = "mp_vs_sp_write"
+harness = false
+
+[[bench]]
+name = "comparison"
 harness = false
