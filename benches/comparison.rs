@@ -90,8 +90,12 @@ mod spsc{
     
         let rt = std::thread::spawn(move || {
             for _ in 0..COUNT {
-                if let None = reader.next(){
-                    yield_fn();
+                loop{
+                    if let None = reader.next(){
+                        yield_fn();
+                    } else {
+                        break;
+                    }
                 }
             }
         });
@@ -113,8 +117,12 @@ mod spsc{
     
         let rt = std::thread::spawn(move || {
             for _ in 0..COUNT {
-                if let None = reader.next(){
-                    yield_fn();
+                loop{
+                    if let None = reader.next(){
+                        yield_fn();
+                    } else {
+                        break;
+                    }
                 }
             }
         });
@@ -163,8 +171,12 @@ mod mpsc {
     
         joins.push(std::thread::spawn(move || {
             for _ in 0..COUNT {
-                if let None = reader.next() {
-                    yield_fn();
+                loop{
+                    if let None = reader.next(){
+                        yield_fn();
+                    } else {
+                        break;
+                    }
                 }
             }
         }));
@@ -191,8 +203,12 @@ mod mpsc {
     
         joins.push(std::thread::spawn(move || {
             for _ in 0..COUNT {
-                if let None = reader.next() {
-                    yield_fn();
+                loop{
+                    if let None = reader.next(){
+                        yield_fn();
+                    } else {
+                        break;
+                    }
                 }
             }
         }));
@@ -256,21 +272,21 @@ mod mpsc {
 
 
 fn criterion_benchmark(c: &mut Criterion) {
-    // seq
+    /*// seq
     {
         use seq::*;
         c.bench_function("spmc seq", |b| b.iter(|| spmc_seq()));
         c.bench_function("mpmc seq", |b| b.iter(|| mpmc_seq()));
         c.bench_function("crossbeam seq", |b| b.iter(|| crossbeam_seq()));
-    }
+    }*/
     
     // spsc
-    {
+    /*{
         use spsc::*;
         c.bench_function("spmc spsc", |b| b.iter(|| spmc_spsc()));
         c.bench_function("mpmc spsc", |b| b.iter(|| mpmc_spsc()));
         c.bench_function("crossbeam spsc", |b| b.iter(|| crossbeam_spsc()));
-    }
+    }*/
     
     // mpsc
     {
