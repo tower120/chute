@@ -1,21 +1,22 @@
-lockfree_broadcast_queue
+lockfree_multicast_queue
 
 # CRATE NAME
 
-An mpsc[^mpsc]/spmc[^spmc] lock-free broadcast[^broadcast] queue. Can be used as a channel as well.
+An mpmc[^mpmc]/spmc[^spmc] lock-free multicast[^broadcast] queue. Can be used as a channel as well.
 
-[^mpsc]: Multi-producer multi-consumer.
+[^mpmc]: Multi-producer multi-consumer.
 
 [^spmc]: Single-producer multi-consumer.
 
-[^broadcast]: Broadcast means that each consumer gets every message sent on the channel,
-from the moment of subscription.
+[^broadcast]: Also known as a broadcast queue. Each consumer gets 
+every message sent to queue, from the moment of subscription.
 
 * Lock-free consumers without overhead[^lockfree_overhead].
-* Mpsc lock-free producers, which write simultaneously.
-* Spmc ordered. Mpsc ordered within writer messages[^mpsc_order].
+* Mpmc lock-free producers, which write simultaneously.
+* Spmc ordered. Mpmc ordered within writer messages[^mpsc_order].
 * Unbounded dynamic size.
 * Shared queue. All readers and writers use the same queue, without duplications.
+* No clones! Messages are not cloned on return, so `Clone` is not required.
 
 Blazingly fast reads. The consumer basically reads a plain slice of data, then does an atomic read that will define the next slice.
 

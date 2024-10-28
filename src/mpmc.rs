@@ -64,7 +64,7 @@ impl<T> Queue<T> {
     
     /// Returns (latest block, inserted). 
     /// 
-    /// Latest block SHOULD be non-full. But the statement could fail.
+    /// The latest block SHOULD be non-full, but can be actually full.
     /// 
     /// Blocking.
     #[must_use]
@@ -111,32 +111,50 @@ impl<T> Queue<T> {
     
     /// Push value to queue.
     /// 
-    /// This is a blocking operation - you can't [push()] simultaneously from
-    /// different threads, but most of the time writers can push in parallel
+    /// This is a blocking operation - you can't [blocking_push()] simultaneously 
+    /// from different threads, but most of the time writers can push in parallel
     /// with this call. 
     /// 
-    /// A little bit faster than a
-    /// constructing writer just to push a single value
+    /// Faster than constructing writer just to push a single value
     /// `writer().push(..)`. But slower than [Writer::push] itself.
     /// 
     /// Use it if you need to occasionally push a single value.
     #[inline]
-    pub fn push(&self, value: T){
+    pub fn blocking_push(&self, value: T) {
+        // 1. Lock
         let block = self.lock_last_block();
         if let Err(value) = unsafe{ block.as_ref() }.try_push(value) {
             #[cold]
             #[inline(never)]
-            fn insert_block_and_push<T>(this: &Queue<T>, value: T){
-                let (block, inserted) = this.insert_block();
-                if !inserted{
-                    unsafe{ std::hint::unreachable_unchecked() }
-                }
-                let result = block.try_push(value);
+            fn insert_block_and_push<T>(this: &Queue<T>, last_block: &Block<T>, value: T){
+                let new_block = {
+                    // 2. Make new block
+                    //    +1 counter for EventQueue::last_block (written on unlock_last_block)
+                    //    +1 counter for Block::next
+                    //    +1 counter for returned BlockArc 
+                    let mut new_block = Block::with_counter(3).into_raw();
+            
+                    // 3. Connect new block with old
+                    last_block.next.store(new_block.as_ptr(), Ordering::Release);
+                    
+                    // 4. Arc -- old block
+                    unsafe{
+                        Block::dec_use_count(last_block.into());
+                    }
+                    
+                    unsafe{ BlockArc::from_raw(new_block) }                    
+                };
+                
+                let result = new_block.try_push(value);
                 if result.is_err(){
                     unsafe{ std::hint::unreachable_unchecked() }
                 }
+                
+                // 5. Set new block as last, and release lock.
+                this.unlock_last_block(new_block.as_non_null());
             }
-            insert_block_and_push(self, value);
+            insert_block_and_push(self, unsafe{block.as_ref()}, value);
+            return;
         }
         self.unlock_last_block(block);
     }
@@ -262,6 +280,8 @@ impl<T> Writer<T> {
 mod test_mpmc{
     use std::sync::Arc;
     use std::sync::atomic::{AtomicUsize, Ordering};
+    use itertools::assert_equal;
+    use crate::block::BLOCK_SIZE;
     use crate::lending_iterator::LendingIterator;
     use crate::mpmc::Queue;
 
@@ -271,13 +291,17 @@ mod test_mpmc{
         let mut reader = queue.lending_reader();
         let mut writer = queue.writer();
         
-        for i in 0..16{
-            writer.push(i);    
+        const COUNT: usize = BLOCK_SIZE * 4; 
+        for i in 0..COUNT {
+            queue.blocking_push(i);
+            //writer.push(i);    
         }
         
+        let mut vec = Vec::new();
         while let Some(value) = reader.next() {
-            println!("{value}");
+            vec.push(value.clone());
         }
+        assert_equal(vec, 0..COUNT);
     }
     
     #[test]
