@@ -1,7 +1,7 @@
 use std::hint::black_box;
 use std::sync::Arc;
 use criterion::{criterion_group, criterion_main, Criterion};
-use event_queue::{mpmc, spmc};
+use chute::{mpmc, spmc};
 
 const THREADS: usize = 4;
 

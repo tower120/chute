@@ -1,6 +1,6 @@
 use std::hint::black_box;
 use criterion::{criterion_group, criterion_main, Criterion};
-use event_queue::{mpmc, spmc, LendingIterator};
+use chute::{mpmc, spmc, LendingIterator};
 use std::sync::Arc;
 use arrayvec::ArrayVec;
 

@@ -1,7 +1,9 @@
 [package]
-name = "event_queue"
+name = "chute"
 version = "0.1.0"
 edition = "2021"
+description = "Lockfree mpmc/spmc multicast queue."
+keywords = ["lockfree", "mpmc", "spmc", "multicast", "queue"]
 
 [dependencies]
 branch_hints = "0.4"

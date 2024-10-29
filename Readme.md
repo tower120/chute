@@ -1,8 +1,9 @@
-lockfree_multicast_queue
+# chute
 
-# CRATE NAME
+![Queue illustration](doc/img/mpmc.png)
+![Queue illustration](doc/img/mpmc_white.svg)
 
-An mpmc[^mpmc]/spmc[^spmc] lock-free multicast[^broadcast] queue. Can be used as a channel as well.
+An mpmc[^mpmc]/spmc[^spmc] lock-free multicast[^broadcast] queue.
 
 [^mpmc]: Multi-producer multi-consumer.
 
@@ -18,7 +19,8 @@ every message sent to queue, from the moment of subscription.
 * Shared queue. All readers and writers use the same queue, without duplications.
 * No clones! Messages are not cloned on return, so `Clone` is not required.
 
-Blazingly fast reads. The consumer basically reads a plain slice of data, then does an atomic read that will define the next slice.
+Blazingly fast reads. The consumer basically reads a plain slice of data, then 
+does an atomic read that will define the next slice.
 
 [^lockfree_overhead]: In compare to traditional lock techniques with Mutex.
 
@@ -27,13 +29,13 @@ will be in the same order against each other.
 But between them, messages from other threads **may** appear.
 If write calls will be synchronized - all messages will be ordered by that "synchronization order".
 
-# Example
+## Example
 
 TODO
 
-# How it works
+## How it works
 
-## Reading
+### Reading
 
 It is based on [rc_event_queue](https://crates.io/crates/rc_event_queue) idea of reader counters. 
 Queue represented as an atomic single-linked list of blocks. Each block have atomic use counter (like Arc). Each block pointed by "next" in list node have +1 use count as well.
@@ -65,7 +67,7 @@ And since queue **CAN NOT** in any way dispose blocks in the middle of the list,
 
  This guarantees that read next block will not be disposed, until we hold arc pointer to it's previous block. Which means that no additional synchronization needed when reader moves to the next block. It can just atomically read "next" pointer - it will always be valid or NULL.
 
-## Writing
+### Writing
 
 Simplified version of pushing value from mpmc writer: 
 
@@ -116,3 +118,12 @@ BEFORE len can be still in progress of writing. So we need separate len, and wri
 
 There is a case when writers keep constantly writing, and it could look like that writer counter NEVER reach 0. But! Since we have per-block counter - as soon as writers travel to the next one - counter WILL drop to 0.
 So we just use reasonably (like 4096) sized blocks - if writers write constantly - it will be depleted and changed fast.
+
+## Known limitations
+
+* Currently, there is no way to "disconnect" slow reading reader from the writer side. 
+The queue can grow indefinitely if at least one of the readers consumes slower
+than writers fill it.
+
+* All blocks have the same size now. This is likely to change in future -
+it will probably work the same way as in [rc_event_queue](https://github.com/tower120/rc_event_queue/blob/HEAD/doc/principle-of-operation.md#dynamic-chunk-size). 
