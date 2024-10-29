@@ -37,7 +37,7 @@ mod seq{
     
     pub fn spmc_seq() {
         let mut queue = spmc::Queue::new();
-        let mut reader = queue.lending_reader();
+        let mut reader = queue.reader();
         
         for i in 0..COUNT {
             queue.push(message::new(i));
@@ -51,7 +51,7 @@ mod seq{
     pub fn mpmc_seq() {
         let queue = mpmc::Queue::new();
         let mut writer = queue.writer();
-        let mut reader = queue.lending_reader();
+        let mut reader = queue.reader();
         
         for i in 0..COUNT {
             writer.push(message::new(i));
@@ -80,7 +80,7 @@ mod spsc{
     
     pub fn spmc_spsc(){
         let mut queue = spmc::Queue::new();
-        let mut reader = queue.lending_reader();
+        let mut reader = queue.reader();
         
         let wt = std::thread::spawn(move || {
             for i in 0..COUNT {
@@ -107,7 +107,7 @@ mod spsc{
     pub fn mpmc_spsc(){
         let queue = mpmc::Queue::new();
         let mut writer = queue.writer();
-        let mut reader = queue.lending_reader();
+        let mut reader = queue.reader();
         
         let wt = std::thread::spawn(move || {
             for i in 0..COUNT {
@@ -156,7 +156,7 @@ mod mpsc {
     
     pub fn mutex_spmc_mpsc(){
         let mut queue: Arc<spin::Mutex<spmc::Queue<_>>> = Default::default();
-        let mut reader = queue.lock().lending_reader();
+        let mut reader = queue.lock().reader();
         
         let mut joins: ArrayVec<_, 64> = Default::default();
         
@@ -188,7 +188,7 @@ mod mpsc {
     
     pub fn mpmc_mpsc(){
         let queue = mpmc::Queue::new();
-        let mut reader = queue.lending_reader();
+        let mut reader = queue.reader();
         
         let mut joins: ArrayVec<_, 64> = Default::default();
         

@@ -8,7 +8,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicPtr, Ordering};
 use crate::block::{Block, BlockArc, BLOCK_SIZE};
 use crate::lending_iterator::LendingIterator;
-use crate::reader::LendingReader;
+use crate::reader::Reader;
 
 pub struct Queue<T> {
     last_block: AtomicPtr<Block<T>>,
@@ -170,12 +170,12 @@ impl<T> Queue<T> {
     
     #[must_use]
     #[inline]
-    pub fn lending_reader(&self) -> LendingReader<T> {
+    pub fn reader(&self) -> Reader<T> {
         let last_block = self.load_last_block();
         let block_len = unsafe {
             last_block.len.load(Ordering::Acquire)  
         };
-        LendingReader {
+        Reader {
             block: last_block,
             index: block_len,
             len:   block_len,
@@ -192,9 +192,12 @@ impl<T> Drop for Queue<T> {
     }
 }
 
-/// Queue writer.
+/// Queue producer.
 ///
-/// Same as reader, writer internally keeps a block pointer. 
+/// Same as reader, writer internally keeps a block pointer.
+/// Which means it also prevents the whole queue after its block form being dropped. 
+/// Block pointer updated to the latest one on each [push()] or [update()].
+/// You also can just construct a new Writer for each write session. 
 pub struct Writer<T> {
     block: BlockArc<T>,
     event_queue: Arc<Queue<T>>
@@ -223,7 +226,7 @@ impl<T> Writer<T> {
     
     /// UNTESTED
     /// 
-    /// Moves writer's internal block pointer to the latest in queue.
+    /// Moves writer's internal block pointer to the latest in a queue.
     /// This prevents writer from keeping a potentially unused blocks alive. 
     pub fn update(&mut self) {
         if self.fast_forward_to_last_block(5).is_err() {
@@ -288,7 +291,7 @@ mod test_mpmc{
     #[test]
     fn test_event_queue() {
         let queue: Arc<Queue<usize>> = Default::default();
-        let mut reader = queue.lending_reader();
+        let mut reader = queue.reader();
         let mut writer = queue.writer();
         
         const COUNT: usize = BLOCK_SIZE * 4; 
@@ -307,8 +310,8 @@ mod test_mpmc{
     #[test]
     fn test_event_queue_mt() {
         let queue: Arc<Queue<usize>> = Default::default();
-        let mut reader0 = queue.lending_reader();
-        let mut reader1 = queue.lending_reader();
+        let mut reader0 = queue.reader();
+        let mut reader1 = queue.reader();
         let mut writer0 = queue.writer();
         let mut writer1 = queue.writer();
         

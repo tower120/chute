@@ -3,10 +3,14 @@ use std::sync::atomic::Ordering;
 use crate::block::{BlockArc, BLOCK_SIZE};
 use crate::lending_iterator::LendingIterator;
 
+// TODO: CloningReader
+// TODO: next_slice()
 // TODO: Clone
-/// Lending reader return `&T`.
-///
-/// This is faster than [EventReader], since it does not clone `T` before return.
+/// Queue consumer.
+/// 
+/// Reader returns `&T` with `&mut self` lifetime. This means you should deal 
+/// with message BEFORE consuming the next one. 
+/// Because of this, it does not implement [Iterator]. But [CloningReader] does. 
 /// 
 /// # Design choices
 /// 
@@ -17,13 +21,13 @@ use crate::lending_iterator::LendingIterator;
 /// reader is mutated. This means the value is guaranteed to live until the next 
 /// read operation, at which point the block may change, and the old block could 
 /// be destructed.
-pub struct LendingReader<T>{
+pub struct Reader<T>{
     pub(crate) block: BlockArc<T>,
     pub(crate) index: usize,
     pub(crate) len  : usize,
 }
 
-impl<T> LendingIterator for LendingReader<T>{
+impl<T> LendingIterator for Reader<T>{
     type Item<'a> = &'a T where Self: 'a;
 
     #[inline]

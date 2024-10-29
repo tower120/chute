@@ -8,7 +8,7 @@ use std::ops::Deref;
 use std::sync::atomic::Ordering;
 use branch_hints::unlikely;
 use crate::block::{Block, BlockArc, BLOCK_SIZE};
-use crate::reader::LendingReader;
+use crate::reader::Reader;
 
 pub struct Queue<T>{
     last_block: BlockArc<T>
@@ -63,12 +63,12 @@ impl<T> Queue<T> {
     
     #[must_use]
     #[inline]
-    pub fn lending_reader(&self) -> LendingReader<T> {
+    pub fn reader(&self) -> Reader<T> {
         let last_block = self.last_block.clone();
         let block_len = unsafe {
             last_block.len.load(Ordering::Acquire)  
         };
-        LendingReader {
+        Reader {
             block: last_block,
             index: block_len,
             len:   block_len,
