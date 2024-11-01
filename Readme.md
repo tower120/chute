@@ -72,10 +72,20 @@ std::thread::scope(|s| {
 
 ## Benchmarks
 
+### svgs
+
 ![seq benchmark](doc/img/benchmarks/seq.svg)
 ![spsc benchmark](doc/img/benchmarks/spsc.svg)
 ![mpsc benchmark](doc/img/benchmarks/mpsc.svg)
 ![mpmc benchmark](doc/img/benchmarks/mpmc.svg)
+
+### pngs
+
+![seq benchmark](doc/img/benchmarks/seq.png)
+![spsc benchmark](doc/img/benchmarks/spsc.png)
+![mpsc benchmark](doc/img/benchmarks/mpsc.png)
+![mpmc benchmark](doc/img/benchmarks/mpmc.png)
+
 
 ## How it works
 

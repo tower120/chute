@@ -1,6 +1,6 @@
 use std::path::Path;
 use charming::{component::{Grid, Axis}, Chart, ImageRenderer};
-use charming::element::{AxisLabel, AxisType, Formatter};
+use charming::element::{AxisLabel, AxisType, Color, Formatter};
 use charming::element::LabelPosition;
 use charming::element::Label;
 use charming::series::{Bar, Series};
@@ -8,8 +8,11 @@ use charming::component::{Legend};
 use charming::component::Title;
 use str_macro::str;
 use std::string::String;
+use charming::theme::Theme;
 use crate::{read_group, EstimatesMPMC};
 use crate::CHART_WIDTH;
+use crate::CHART_THEME;
+use crate::CHART_BACKGROUND;
 
 pub fn mpmc(dir_name: impl AsRef<Path>) {
     let dir_name = dir_name.as_ref();
@@ -18,27 +21,27 @@ pub fn mpmc(dir_name: impl AsRef<Path>) {
     let rts = [1,2,4,8];
     
     let chute_spmc_w_mutex = read_group(
-        &std::path::Path::new(dir_name).join("chute__spmc_mutex")
+        &Path::new(dir_name).join("chute__spmc_mutex")
         ,&wts, &rts
     );
     
     let chute_mpmc = read_group(
-        &std::path::Path::new(dir_name).join("chute__mpmc")
+        &Path::new(dir_name).join("chute__mpmc")
         ,&wts, &rts
     );
     
     let tokio_broadcast = read_group(
-        &std::path::Path::new(dir_name).join("tokio__broadcast")
+        &Path::new(dir_name).join("tokio__broadcast")
         ,&wts, &rts
     );
     
     let all: Vec<(String, EstimatesMPMC)> = vec![
         (str!("chute::spmc\nw/ mutex"), chute_spmc_w_mutex),
         (str!("chute::mpmc"), chute_mpmc),
-        (str!("tokio::broadcast"), tokio_broadcast),
+        (str!("tokio::\nbroadcast"), tokio_broadcast),
     ];
     
-    chart(&all, 4, str!("mpmc (4 readers)"), "out/mpmc.svg");    
+    chart(&all, 4, str!("mpmc (4 readers)"), "out/mpmc");    
 }
 
 /// `rt` - read thread count
@@ -46,7 +49,7 @@ pub fn chart(
     all_estimates: &Vec<(String, EstimatesMPMC)>, 
     rt: usize, 
     title: String,
-    fname: impl AsRef<std::path::Path>
+    fname: impl AsRef<Path>
 ) {
     let wts: Vec<usize> = all_estimates.first().unwrap().1
         .iter().map(|(wt, _)| *wt)
@@ -57,6 +60,7 @@ pub fn chart(
     
     let mut chart = 
     Chart::new()
+        .background_color(CHART_BACKGROUND)
         .title(
             Title::new()
             .text(title)
@@ -66,7 +70,7 @@ pub fn chart(
             Legend::new().top("bottom")
         )
         .grid(
-            Grid::new()
+            Grid::new().left(100)
         )
         .y_axis(
             Axis::new()
@@ -75,7 +79,8 @@ pub fn chart(
                     all_estimates.iter()
                     .map(|(name,_)| name.clone())
                     .collect()
-                ),
+                )
+                .axis_label(AxisLabel::new().show(true).font_size(14))
         )    
         .x_axis(
             Axis::new()
@@ -94,11 +99,11 @@ pub fn chart(
             .label(
                 Label::new()
                 .show(true)
-                .position(LabelPosition::InsideRight)
+                .position(LabelPosition::Right)
                 .formatter(Formatter::Function(
                     (
                         "function (param) { return param.data.toFixed(2) + \"".to_string()
-                        + &unit
+                        //+ &unit
                         + "\"; }"
                     ).into()
                 ))
@@ -112,7 +117,7 @@ pub fn chart(
         chart = chart.series(Series::Bar(bar));
     }
     
-    let mut renderer = ImageRenderer::new(CHART_WIDTH, 400);
-    renderer.save(&chart, fname).unwrap();
-    //renderer.save_format(ImageFormat::Png, &chart, "charming.png");    
+    let mut renderer = ImageRenderer::new(CHART_WIDTH, 400).theme(CHART_THEME);
+    renderer.save(&chart, fname.as_ref().with_extension("svg")).unwrap();
+    renderer.save_format(charming::ImageFormat::Png, &chart, fname.as_ref().with_extension("png"));    
 }

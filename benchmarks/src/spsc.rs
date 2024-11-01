@@ -3,9 +3,12 @@ use charming::{Chart, ImageRenderer};
 use charming::component::{Axis, Grid, Legend, Title};
 use charming::element::{AxisLabel, AxisType, Formatter, Label, LabelPosition};
 use charming::series::{Bar, Series};
+use charming::theme::Theme;
 use str_macro::str;
 use crate::{read_estimate};
 use crate::CHART_WIDTH;
+use crate::CHART_THEME;
+use crate::CHART_BACKGROUND;
 
 pub fn spsc(dir_name: impl AsRef<Path>) {
     let dir_name = dir_name.as_ref();
@@ -28,7 +31,7 @@ pub fn spsc(dir_name: impl AsRef<Path>) {
         (str!("crossbeam\n(unbounded)"), crossbeam_unbounded),
     ];
     
-    chart(&all, str!("spsc"), "out/spsc.svg");    
+    chart(&all, str!("spsc"), "out/spsc");    
 }
 
 pub fn chart(
@@ -41,6 +44,7 @@ pub fn chart(
     
     let mut chart = 
     Chart::new()
+        .background_color(CHART_BACKGROUND)
         .title(
             Title::new()
             .text(title)
@@ -50,7 +54,7 @@ pub fn chart(
             Legend::new().top("bottom")
         )
         .grid(
-            Grid::new()
+            Grid::new().left(100)
         )
         .y_axis(
             Axis::new()
@@ -59,7 +63,8 @@ pub fn chart(
                     all_estimates.iter()
                     .map(|(name,_)| name.clone())
                     .collect()
-                ),
+                )
+                .axis_label(AxisLabel::new().show(true).font_size(14))
         )    
         .x_axis(
             Axis::new()
@@ -78,11 +83,11 @@ pub fn chart(
             .label(
                 Label::new()
                 .show(true)
-                .position(LabelPosition::InsideRight)
+                .position(LabelPosition::Right)
                 .formatter(Formatter::Function(
                     (
                         "function (param) { return param.data.toFixed(2) + \"".to_string()
-                        + &unit
+                        //+ &unit
                         + "\"; }"
                     ).into()
                 ))
@@ -96,6 +101,7 @@ pub fn chart(
         chart = chart.series(Series::Bar(bar));
     }
     
-    let mut renderer = ImageRenderer::new(CHART_WIDTH, 220);
-    renderer.save(&chart, fname).unwrap();    
+    let mut renderer = ImageRenderer::new(CHART_WIDTH, 240).theme(CHART_THEME);
+    renderer.save(&chart, fname.as_ref().with_extension("svg")).unwrap();
+    renderer.save_format(charming::ImageFormat::Png, &chart, fname.as_ref().with_extension("png"));    
 }

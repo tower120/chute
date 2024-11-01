@@ -28,8 +28,8 @@ pub fn mpsc(dir_name: impl AsRef<Path>) {
     let all: Vec<(String, EstimatesMPMC)> = vec![
         (str!("chute::spmc\nw/ mutex"), chute_spmc_w_mutex),
         (str!("chute::mpmc"), chute_mpmc),
-        (str!("crossbeam\n(unbounded)"), crossbeam_unbounded),
+        (str!("crossbeam::\nunbounded"), crossbeam_unbounded),
     ];
     
-    mpmc::chart(&all, 1, str!("mpsc"), "out/mpsc.svg");
+    mpmc::chart(&all, 1, str!("mpsc"), "out/mpsc");
 }

@@ -9,6 +9,7 @@ use std::fs::File;
 use std::env;
 use std::io::Read;
 use std::path::Path;
+use charming::theme::Theme;
 use json::JsonValue;
 
 fn parse_json_file(fname: &Path) -> JsonValue {
@@ -47,7 +48,9 @@ fn read_group(dir_name: &Path, writers: &[usize], readers: &[usize]) -> Estimate
     wts
 }
 
-const CHART_WIDTH: u32 = 1000;
+const CHART_THEME: Theme = Theme::Default;
+const CHART_BACKGROUND: &str = "#FFFFFF";
+const CHART_WIDTH: u32 = 600;
 
 fn main(){
     #[derive(Eq, PartialEq)]

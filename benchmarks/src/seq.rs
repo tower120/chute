@@ -24,5 +24,5 @@ pub fn seq(dir_name: impl AsRef<Path>) {
         (str!("crossbeam\n(unbounded)"), crossbeam_unbounded),
     ];
     
-    spsc::chart(&all, str!("seq"), "out/seq.svg");    
+    spsc::chart(&all, str!("seq"), "out/seq");    
 }
