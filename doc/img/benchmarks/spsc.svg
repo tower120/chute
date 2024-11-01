@@ -1,35 +1,35 @@
-<svg width="600" height="240" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" baseProfile="full" viewBox="0 0 600 240">
-<rect width="600" height="240" x="0" y="0" id="0" fill="#FFFFFF"></rect>
-<path d="M100.5 60L100.5 170" fill="none" stroke="#E0E6F1"></path>
-<path d="M173.5 60L173.5 170" fill="none" stroke="#E0E6F1"></path>
-<path d="M246.5 60L246.5 170" fill="none" stroke="#E0E6F1"></path>
-<path d="M320.5 60L320.5 170" fill="none" stroke="#E0E6F1"></path>
-<path d="M393.5 60L393.5 170" fill="none" stroke="#E0E6F1"></path>
-<path d="M466.5 60L466.5 170" fill="none" stroke="#E0E6F1"></path>
-<path d="M540.5 60L540.5 170" fill="none" stroke="#E0E6F1"></path>
-<path d="M100.5 170L100.5 60" fill="none" stroke="#6E7079" stroke-linecap="round"></path>
-<path d="M100 170.5L95 170.5" fill="none" stroke="#6E7079"></path>
-<path d="M100 133.5L95 133.5" fill="none" stroke="#6E7079"></path>
-<path d="M100 96.5L95 96.5" fill="none" stroke="#6E7079"></path>
-<path d="M100 60.5L95 60.5" fill="none" stroke="#6E7079"></path>
-<text dominant-baseline="central" text-anchor="end" style="font-size:14px;font-family:sans-serif;" transform="translate(92 151.6667)" fill="#6E7079">chute::spmc</text>
-<text dominant-baseline="central" text-anchor="end" style="font-size:14px;font-family:sans-serif;" transform="translate(92 115)" fill="#6E7079">chute::mpmc</text>
-<text dominant-baseline="central" text-anchor="end" style="font-size:14px;font-family:sans-serif;" y="-7" transform="translate(92 78.3333)" fill="#6E7079">crossbeam</text>
-<text dominant-baseline="central" text-anchor="end" style="font-size:14px;font-family:sans-serif;" y="7" transform="translate(92 78.3333)" fill="#6E7079">(unbounded)</text>
-<text dominant-baseline="central" text-anchor="middle" style="font-size:12px;font-family:sans-serif;" y="6" transform="translate(100 178)" fill="#6E7079">0ms</text>
-<text dominant-baseline="central" text-anchor="middle" style="font-size:12px;font-family:sans-serif;" y="6" transform="translate(173.3333 178)" fill="#6E7079">1ms</text>
-<text dominant-baseline="central" text-anchor="middle" style="font-size:12px;font-family:sans-serif;" y="6" transform="translate(246.6667 178)" fill="#6E7079">2ms</text>
-<text dominant-baseline="central" text-anchor="middle" style="font-size:12px;font-family:sans-serif;" y="6" transform="translate(320 178)" fill="#6E7079">3ms</text>
-<text dominant-baseline="central" text-anchor="middle" style="font-size:12px;font-family:sans-serif;" y="6" transform="translate(393.3333 178)" fill="#6E7079">4ms</text>
-<text dominant-baseline="central" text-anchor="middle" style="font-size:12px;font-family:sans-serif;" y="6" transform="translate(466.6667 178)" fill="#6E7079">5ms</text>
-<text dominant-baseline="central" text-anchor="middle" style="font-size:12px;font-family:sans-serif;" y="6" transform="translate(540 178)" fill="#6E7079">6ms</text>
-<path d="M100 139l95.2 0l0 25.3l-95.2 0Z" fill="#5470c6"></path>
-<path d="M100 102.4l375.9 0l0 25.3l-375.9 0Z" fill="#5470c6"></path>
-<path d="M100 65.7l411.5 0l0 25.3l-411.5 0Z" fill="#5470c6"></path>
-<text dominant-baseline="central" text-anchor="start" style="font-size:12px;font-family:sans-serif;" transform="translate(200.181 151.6667)" fill="#333" stroke="rgb(255,255,255)" stroke-width="2" paint-order="stroke" stroke-miterlimit="2">1.30</text>
-<text dominant-baseline="central" text-anchor="start" style="font-size:12px;font-family:sans-serif;" transform="translate(480.945 115)" fill="#333" stroke="rgb(255,255,255)" stroke-width="2" paint-order="stroke" stroke-miterlimit="2">5.13</text>
-<text dominant-baseline="central" text-anchor="start" style="font-size:12px;font-family:sans-serif;" transform="translate(516.499 78.3333)" fill="#333" stroke="rgb(255,255,255)" stroke-width="2" paint-order="stroke" stroke-miterlimit="2">5.61</text>
-<path d="M-5 -5l10 0l0 10l-10 0Z" transform="translate(300 235)" fill="rgb(0,0,0)" fill-opacity="0" stroke="#ccc" stroke-width="0"></path>
+<svg width="600" height="180" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" baseProfile="full" viewBox="0 0 600 180">
+<rect width="600" height="180" x="0" y="0" id="0" fill="#FFFFFF"></rect>
+<path d="M100.5 40L100.5 155" fill="none" stroke="#E0E6F1"></path>
+<path d="M176.5 40L176.5 155" fill="none" stroke="#E0E6F1"></path>
+<path d="M253.5 40L253.5 155" fill="none" stroke="#E0E6F1"></path>
+<path d="M330.5 40L330.5 155" fill="none" stroke="#E0E6F1"></path>
+<path d="M406.5 40L406.5 155" fill="none" stroke="#E0E6F1"></path>
+<path d="M483.5 40L483.5 155" fill="none" stroke="#E0E6F1"></path>
+<path d="M560.5 40L560.5 155" fill="none" stroke="#E0E6F1"></path>
+<path d="M100.5 155L100.5 40" fill="none" stroke="#6E7079" stroke-linecap="round"></path>
+<path d="M100 155.5L95 155.5" fill="none" stroke="#6E7079"></path>
+<path d="M100 116.5L95 116.5" fill="none" stroke="#6E7079"></path>
+<path d="M100 78.5L95 78.5" fill="none" stroke="#6E7079"></path>
+<path d="M100 40.5L95 40.5" fill="none" stroke="#6E7079"></path>
+<text dominant-baseline="central" text-anchor="end" style="font-size:14px;font-family:sans-serif;" transform="translate(92 135.8333)" fill="#6E7079">chute::spmc</text>
+<text dominant-baseline="central" text-anchor="end" style="font-size:14px;font-family:sans-serif;" transform="translate(92 97.5)" fill="#6E7079">chute::mpmc</text>
+<text dominant-baseline="central" text-anchor="end" style="font-size:14px;font-family:sans-serif;" y="-7" transform="translate(92 59.1667)" fill="#6E7079">crossbeam::</text>
+<text dominant-baseline="central" text-anchor="end" style="font-size:14px;font-family:sans-serif;" y="7" transform="translate(92 59.1667)" fill="#6E7079">unbounded</text>
+<text dominant-baseline="central" text-anchor="middle" style="font-size:12px;font-family:sans-serif;" y="6" transform="translate(100 163)" fill="#6E7079">0ms</text>
+<text dominant-baseline="central" text-anchor="middle" style="font-size:12px;font-family:sans-serif;" y="6" transform="translate(176.6667 163)" fill="#6E7079">1ms</text>
+<text dominant-baseline="central" text-anchor="middle" style="font-size:12px;font-family:sans-serif;" y="6" transform="translate(253.3333 163)" fill="#6E7079">2ms</text>
+<text dominant-baseline="central" text-anchor="middle" style="font-size:12px;font-family:sans-serif;" y="6" transform="translate(330 163)" fill="#6E7079">3ms</text>
+<text dominant-baseline="central" text-anchor="middle" style="font-size:12px;font-family:sans-serif;" y="6" transform="translate(406.6667 163)" fill="#6E7079">4ms</text>
+<text dominant-baseline="central" text-anchor="middle" style="font-size:12px;font-family:sans-serif;" y="6" transform="translate(483.3333 163)" fill="#6E7079">5ms</text>
+<text dominant-baseline="central" text-anchor="middle" style="font-size:12px;font-family:sans-serif;" y="6" transform="translate(560 163)" fill="#6E7079">6ms</text>
+<path d="M100 123.8l99.5 0l0 24l-99.5 0Z" fill="#5470c6"></path>
+<path d="M100 85.5l393 0l0 24l-393 0Z" fill="#5470c6"></path>
+<path d="M100 47.2l430.2 0l0 24l-430.2 0Z" fill="#5470c6"></path>
+<text dominant-baseline="central" text-anchor="start" style="font-size:12px;font-family:sans-serif;" transform="translate(204.5074 135.8333)" fill="#333" stroke="rgb(255,255,255)" stroke-width="2" paint-order="stroke" stroke-miterlimit="2">1.30</text>
+<text dominant-baseline="central" text-anchor="start" style="font-size:12px;font-family:sans-serif;" transform="translate(498.0334 97.5)" fill="#333" stroke="rgb(255,255,255)" stroke-width="2" paint-order="stroke" stroke-miterlimit="2">5.13</text>
+<text dominant-baseline="central" text-anchor="start" style="font-size:12px;font-family:sans-serif;" transform="translate(535.2035 59.1667)" fill="#333" stroke="rgb(255,255,255)" stroke-width="2" paint-order="stroke" stroke-miterlimit="2">5.61</text>
+<path d="M-5 -5l10 0l0 10l-10 0Z" transform="translate(300 175)" fill="rgb(0,0,0)" fill-opacity="0" stroke="#ccc" stroke-width="0"></path>
 <path d="M-23.5 -5l47.1 0l0 28l-47.1 0Z" transform="translate(300 5)" fill="rgb(0,0,0)" fill-opacity="0" stroke="#ccc" stroke-width="0"></path>
 <text dominant-baseline="central" text-anchor="middle" style="font-size:18px;font-family:sans-serif;font-weight:bold;" y="9" transform="translate(300 5)" fill="#464646">spsc</text>
 </svg>

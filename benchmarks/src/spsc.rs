@@ -28,7 +28,7 @@ pub fn spsc(dir_name: impl AsRef<Path>) {
     let all: Vec<(String, f64)> = vec![
         (str!("chute::spmc"), chute_spmc),
         (str!("chute::mpmc"), chute_mpmc),
-        (str!("crossbeam\n(unbounded)"), crossbeam_unbounded),
+        (str!("crossbeam::\nunbounded")/*str!("crossbeam")*/, crossbeam_unbounded),
     ];
     
     chart(&all, str!("spsc"), "out/spsc");    
@@ -54,7 +54,11 @@ pub fn chart(
             Legend::new().top("bottom")
         )
         .grid(
-            Grid::new().left(100)
+            Grid::new()
+                .left(100)
+                .right(40)
+                .top(40)
+                .bottom(25)
         )
         .y_axis(
             Axis::new()
@@ -79,6 +83,7 @@ pub fn chart(
     {
         let mut bar = 
             Bar::new()
+            .bar_width(24)
             //.name(format!("{wt} writers"))
             .label(
                 Label::new()
@@ -101,7 +106,7 @@ pub fn chart(
         chart = chart.series(Series::Bar(bar));
     }
     
-    let mut renderer = ImageRenderer::new(CHART_WIDTH, 240).theme(CHART_THEME);
+    let mut renderer = ImageRenderer::new(CHART_WIDTH, 180).theme(CHART_THEME);
     renderer.save(&chart, fname.as_ref().with_extension("svg")).unwrap();
     renderer.save_format(charming::ImageFormat::Png, &chart, fname.as_ref().with_extension("png"));    
 }

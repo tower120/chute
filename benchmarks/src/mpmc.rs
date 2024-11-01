@@ -70,7 +70,11 @@ pub fn chart(
             Legend::new().top("bottom")
         )
         .grid(
-            Grid::new().left(100)
+            Grid::new()
+                .left(100)
+                .right(40)
+                .top(40)
+                .bottom(60)
         )
         .y_axis(
             Axis::new()
@@ -117,7 +121,7 @@ pub fn chart(
         chart = chart.series(Series::Bar(bar));
     }
     
-    let mut renderer = ImageRenderer::new(CHART_WIDTH, 400).theme(CHART_THEME);
+    let mut renderer = ImageRenderer::new(CHART_WIDTH, 340).theme(CHART_THEME);
     renderer.save(&chart, fname.as_ref().with_extension("svg")).unwrap();
     renderer.save_format(charming::ImageFormat::Png, &chart, fname.as_ref().with_extension("png"));    
 }

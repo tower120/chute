@@ -21,7 +21,7 @@ pub fn seq(dir_name: impl AsRef<Path>) {
     let all: Vec<(String, f64)> = vec![
         (str!("chute::spmc"), chute_spmc),
         (str!("chute::mpmc"), chute_mpmc),
-        (str!("crossbeam\n(unbounded)"), crossbeam_unbounded),
+        (str!("crossbeam::\nunbounded"), crossbeam_unbounded),
     ];
     
     spsc::chart(&all, str!("seq"), "out/seq");    
