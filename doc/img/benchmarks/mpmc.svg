@@ -1,0 +1,57 @@
+<svg width="1000" height="400" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" baseProfile="full" viewBox="0 0 1000 400">
+<rect width="1000" height="400" x="0" y="0" id="0" fill="none"></rect>
+<path d="M100.5 60L100.5 330" fill="none" stroke="#E0E6F1"></path>
+<path d="M300.5 60L300.5 330" fill="none" stroke="#E0E6F1"></path>
+<path d="M500.5 60L500.5 330" fill="none" stroke="#E0E6F1"></path>
+<path d="M700.5 60L700.5 330" fill="none" stroke="#E0E6F1"></path>
+<path d="M900.5 60L900.5 330" fill="none" stroke="#E0E6F1"></path>
+<path d="M100.5 330L100.5 60" fill="none" stroke="#6E7079" stroke-linecap="round"></path>
+<path d="M100 330.5L95 330.5" fill="none" stroke="#6E7079"></path>
+<path d="M100 240.5L95 240.5" fill="none" stroke="#6E7079"></path>
+<path d="M100 150.5L95 150.5" fill="none" stroke="#6E7079"></path>
+<path d="M100 60.5L95 60.5" fill="none" stroke="#6E7079"></path>
+<text dominant-baseline="central" text-anchor="end" style="font-size:12px;font-family:sans-serif;" y="-6" transform="translate(92 285)" fill="#6E7079">chute::spmc</text>
+<text dominant-baseline="central" text-anchor="end" style="font-size:12px;font-family:sans-serif;" xml:space="preserve" y="6" transform="translate(92 285)" fill="#6E7079">w/ mutex</text>
+<text dominant-baseline="central" text-anchor="end" style="font-size:12px;font-family:sans-serif;" transform="translate(92 195)" fill="#6E7079">chute::mpmc</text>
+<text dominant-baseline="central" text-anchor="end" style="font-size:12px;font-family:sans-serif;" transform="translate(92 105)" fill="#6E7079">tokio::broadcast</text>
+<text dominant-baseline="central" text-anchor="middle" style="font-size:12px;font-family:sans-serif;" y="6" transform="translate(100 338)" fill="#6E7079">0ms</text>
+<text dominant-baseline="central" text-anchor="middle" style="font-size:12px;font-family:sans-serif;" y="6" transform="translate(300 338)" fill="#6E7079">20ms</text>
+<text dominant-baseline="central" text-anchor="middle" style="font-size:12px;font-family:sans-serif;" y="6" transform="translate(500 338)" fill="#6E7079">40ms</text>
+<text dominant-baseline="central" text-anchor="middle" style="font-size:12px;font-family:sans-serif;" y="6" transform="translate(700 338)" fill="#6E7079">60ms</text>
+<text dominant-baseline="central" text-anchor="middle" style="font-size:12px;font-family:sans-serif;" y="6" transform="translate(900 338)" fill="#6E7079">80ms</text>
+<path d="M100 248.6l47.1 0l0 15.8l-47.1 0Z" fill="#5470c6"></path>
+<path d="M100 158.6l94.9 0l0 15.8l-94.9 0Z" fill="#5470c6"></path>
+<path d="M100 68.6l291.3 0l0 15.8l-291.3 0Z" fill="#5470c6"></path>
+<path d="M100 267.6l98.7 0l0 15.8l-98.7 0Z" fill="#91cc75"></path>
+<path d="M100 177.6l90 0l0 15.8l-90 0Z" fill="#91cc75"></path>
+<path d="M100 87.6l325.7 0l0 15.8l-325.7 0Z" fill="#91cc75"></path>
+<path d="M100 286.6l129 0l0 15.8l-129 0Z" fill="#fac858"></path>
+<path d="M100 196.6l81.2 0l0 15.8l-81.2 0Z" fill="#fac858"></path>
+<path d="M100 106.6l756.7 0l0 15.8l-756.7 0Z" fill="#fac858"></path>
+<path d="M100 305.6l167.1 0l0 15.8l-167.1 0Z" fill="#ee6666"></path>
+<path d="M100 215.6l86.4 0l0 15.8l-86.4 0Z" fill="#ee6666"></path>
+<path d="M100 125.6l426.1 0l0 15.8l-426.1 0Z" fill="#ee6666"></path>
+<text dominant-baseline="central" text-anchor="end" style="font-size:12px;font-family:sans-serif;" transform="translate(142.148 256.4739)" fill="#eee" stroke="#5470c6" stroke-width="2" paint-order="stroke" stroke-miterlimit="2">4.71ms</text>
+<text dominant-baseline="central" text-anchor="end" style="font-size:12px;font-family:sans-serif;" transform="translate(189.8563 166.4739)" fill="#eee" stroke="#5470c6" stroke-width="2" paint-order="stroke" stroke-miterlimit="2">9.49ms</text>
+<text dominant-baseline="central" text-anchor="end" style="font-size:12px;font-family:sans-serif;" transform="translate(386.253 76.4739)" fill="#eee" stroke="#5470c6" stroke-width="2" paint-order="stroke" stroke-miterlimit="2">29.13ms</text>
+<text dominant-baseline="central" text-anchor="end" style="font-size:12px;font-family:sans-serif;" transform="translate(193.7137 275.4913)" fill="#333">9.87ms</text>
+<text dominant-baseline="central" text-anchor="end" style="font-size:12px;font-family:sans-serif;" transform="translate(184.9667 185.4913)" fill="#333">9.00ms</text>
+<text dominant-baseline="central" text-anchor="end" style="font-size:12px;font-family:sans-serif;" transform="translate(420.7283 95.4913)" fill="#333">32.57ms</text>
+<text dominant-baseline="central" text-anchor="end" style="font-size:12px;font-family:sans-serif;" transform="translate(223.9944 294.5087)" fill="#333">12.90ms</text>
+<text dominant-baseline="central" text-anchor="end" style="font-size:12px;font-family:sans-serif;" transform="translate(176.2097 204.5087)" fill="#333">8.12ms</text>
+<text dominant-baseline="central" text-anchor="end" style="font-size:12px;font-family:sans-serif;" transform="translate(851.701 114.5087)" fill="#333">75.67ms</text>
+<text dominant-baseline="central" text-anchor="end" style="font-size:12px;font-family:sans-serif;" transform="translate(262.1418 313.5261)" fill="#333">16.71ms</text>
+<text dominant-baseline="central" text-anchor="end" style="font-size:12px;font-family:sans-serif;" transform="translate(181.3943 223.5261)" fill="#333">8.64ms</text>
+<text dominant-baseline="central" text-anchor="end" style="font-size:12px;font-family:sans-serif;" transform="translate(521.122 133.5261)" fill="#333">42.61ms</text>
+<path d="M-5 -5l341.4 0l0 24l-341.4 0Z" transform="translate(334.28 381)" fill="rgb(0,0,0)" fill-opacity="0" stroke="#ccc" stroke-width="0"></path>
+<path d="M3.5 0L21.5 0A3.5 3.5 0 0 1 25 3.5L25 10.5A3.5 3.5 0 0 1 21.5 14L3.5 14A3.5 3.5 0 0 1 0 10.5L0 3.5A3.5 3.5 0 0 1 3.5 0" transform="translate(334.28 381)" fill="#5470c6"></path>
+<text dominant-baseline="central" text-anchor="start" style="font-size:12px;font-family:sans-serif;" xml:space="preserve" x="30" y="7" transform="translate(334.28 381)" fill="#333">1 writers</text>
+<path d="M3.5 0L21.5 0A3.5 3.5 0 0 1 25 3.5L25 10.5A3.5 3.5 0 0 1 21.5 14L3.5 14A3.5 3.5 0 0 1 0 10.5L0 3.5A3.5 3.5 0 0 1 3.5 0" transform="translate(419.64 381)" fill="#91cc75"></path>
+<text dominant-baseline="central" text-anchor="start" style="font-size:12px;font-family:sans-serif;" xml:space="preserve" x="30" y="7" transform="translate(419.64 381)" fill="#333">2 writers</text>
+<path d="M3.5 0L21.5 0A3.5 3.5 0 0 1 25 3.5L25 10.5A3.5 3.5 0 0 1 21.5 14L3.5 14A3.5 3.5 0 0 1 0 10.5L0 3.5A3.5 3.5 0 0 1 3.5 0" transform="translate(505 381)" fill="#fac858"></path>
+<text dominant-baseline="central" text-anchor="start" style="font-size:12px;font-family:sans-serif;" xml:space="preserve" x="30" y="7" transform="translate(505 381)" fill="#333">4 writers</text>
+<path d="M3.5 0L21.5 0A3.5 3.5 0 0 1 25 3.5L25 10.5A3.5 3.5 0 0 1 21.5 14L3.5 14A3.5 3.5 0 0 1 0 10.5L0 3.5A3.5 3.5 0 0 1 3.5 0" transform="translate(590.36 381)" fill="#ee6666"></path>
+<text dominant-baseline="central" text-anchor="start" style="font-size:12px;font-family:sans-serif;" xml:space="preserve" x="30" y="7" transform="translate(590.36 381)" fill="#333">8 writers</text>
+<path d="M-76.1 -5l152.2 0l0 28l-152.2 0Z" transform="translate(500 5)" fill="rgb(0,0,0)" fill-opacity="0" stroke="#ccc" stroke-width="0"></path>
+<text dominant-baseline="central" text-anchor="middle" style="font-size:18px;font-family:sans-serif;font-weight:bold;" xml:space="preserve" y="9" transform="translate(500 5)" fill="#464646">mpmc (4 readers)</text>
+</svg>
