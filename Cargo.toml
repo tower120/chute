@@ -18,7 +18,3 @@ crossbeam = "0.8"
 [[bench]]
 name = "mp_vs_sp_write"
 harness = false
-
-[[bench]]
-name = "comparison"
-harness = false

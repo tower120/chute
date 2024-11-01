@@ -1,3 +1,5 @@
+//! Write from multiple threads, read from multiple threads.
+//! 
 //! Example from readme
 
 use chute::{LendingIterator};
@@ -16,6 +18,7 @@ fn main() {
             s.spawn(move || {
                 let mut sum = 0;
                 for _ in 0..MESSAGES {
+                    // Wait for ths next message.
                     let msg = loop {
                         if let Some(msg) = reader.next() {
                             break msg;
