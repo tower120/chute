@@ -1,6 +1,10 @@
 # chute
 
-![Queue illustration](doc/img/mpmc_white.svg)
+[![crates.io](https://img.shields.io/crates/v/chute.svg)](https://crates.io/crates/chute)
+[![license](https://img.shields.io/badge/license-Apache--2.0_OR_MIT-blue?style=flat-square)](#license)
+[![Docs](https://docs.rs/hi_sparse_bitset/badge.svg)](https://docs.rs/chute)
+
+![Queue illustration](doc/img/mpmc_white.png)
 
 An mpmc[^mpmc]/spmc[^spmc] lock-free multicast[^broadcast] queue.
 

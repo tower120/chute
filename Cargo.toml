@@ -1,6 +1,6 @@
 [package]
 name = "chute"
-version = "0.1.0-alpha.2"
+version = "0.1.0"
 license = "MIT OR Apache-2.0"
 edition = "2021"
 exclude = ["benchmarks", "doc"]
@@ -17,7 +17,6 @@ criterion = { version = "0.5", features = ["html_reports"] }
 itertools = "0.13"
 spin = "0.9.8"
 arrayvec = "0.7"
-crossbeam = "0.8"
 
 [[bench]]
 name = "mp_vs_sp_write"
