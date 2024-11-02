@@ -1,8 +1,10 @@
 [package]
 name = "chute"
 version = "0.1.0-alpha.1"
+license = "MIT OR Apache-2.0"
 edition = "2021"
 exclude = ["benchmarks", "doc"]
+repository  = "https://github.com/tower120/chute"
 description = "Lockfree mpmc/spmc multicast queue."
 categories = ["concurrency", "data-structures"]
 keywords   = ["lockfree", "mpmc", "spmc", "multicast", "queue"]
