@@ -4,7 +4,6 @@
 //! 
 //! Wrapping it in `Arc<Mutex>` will make it multi-producer. 
 
-use std::ops::Deref;
 use std::sync::atomic::Ordering;
 use branch_hints::unlikely;
 use crate::block::{Block, BlockArc, BLOCK_SIZE};
@@ -65,9 +64,7 @@ impl<T> Queue<T> {
     #[inline]
     pub fn reader(&self) -> Reader<T> {
         let last_block = self.last_block.clone();
-        let block_len = unsafe {
-            last_block.len.load(Ordering::Acquire)  
-        };
+        let block_len  = last_block.len.load(Ordering::Acquire);
         Reader {
             block: last_block,
             index: block_len,

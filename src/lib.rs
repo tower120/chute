@@ -1,5 +1,6 @@
-//! Multi-producer multi-consumer lock-free FIFO queue. Each consumer see its
-//! own queue.
+//! Multi-producer multi-consumer lock-free multicast[^multicast] queue. 
+//! 
+//! [^multicast]: Each consumer gets every message sent to queue, from the moment of subscription.
 //!
 //! Memory-wise all consumers works with the same shared data blocks, so there 
 //! is no duplication.
@@ -12,16 +13,10 @@
 //! Both, [spmc] and [mpmc] can work in multi-producer mode.
 //! 
 //! In general, using `Arc<spin::Mutex<spmc::Queue<T>>>` is more performant
-//! then `Arc<mpmc::Queue<T>>` from writer perspective.
-//!
+//! than `Arc<mpmc::Queue<T>>` from writer perspective.
 //! But! Writing simultaneously from several threads is faster with [mpmc].
-//! TODO: See benchmarks
 //! 
 //! Read performance identical.
-//! 
-//! # How it works
-//! 
-//! TODO: move section to readme and copy from rc_event_queue.
 
 mod block;
 

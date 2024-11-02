@@ -3,14 +3,17 @@ use std::sync::atomic::Ordering;
 use crate::block::{BlockArc, BLOCK_SIZE};
 use crate::lending_iterator::LendingIterator;
 
-// TODO: CloningReader
 // TODO: next_slice()
 // TODO: Clone
 /// Queue consumer.
 /// 
 /// Reader returns `&T` with `&mut self` lifetime. This means you should deal 
 /// with message BEFORE consuming the next one. 
-/// Because of this, it does not implement [Iterator]. But [CloningReader] does. 
+/// Because of this, it does not implement [Iterator]. But [ClonedReader] does.
+///
+/// Constructed by [Queue::reader()].
+///
+///[Queue::reader()]: crate::spmc::Queue::reader 
 /// 
 /// # Design choices
 /// 
@@ -25,6 +28,13 @@ pub struct Reader<T>{
     pub(crate) block: BlockArc<T>,
     pub(crate) index: usize,
     pub(crate) len  : usize,
+}
+
+impl<T> Reader<T> {
+    #[inline]
+    pub fn cloned(self) -> ClonedReader<T> {
+        ClonedReader{reader: self}
+    } 
 }
 
 impl<T> LendingIterator for Reader<T>{
@@ -66,5 +76,22 @@ impl<T> LendingIterator for Reader<T>{
             self.index += 1;
             Some(value)
         }
+    }
+}
+
+/// Cloning queue consumer.
+/// 
+/// Reader that clones `T` upon return. Implements [Iterator].
+///
+/// Constructed by [Reader::cloned()]. 
+pub struct ClonedReader<T>{
+    reader: Reader<T>   
+}
+impl<T: Clone> Iterator for ClonedReader<T> {
+    type Item = T;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        self.reader.next().cloned()
     }
 }

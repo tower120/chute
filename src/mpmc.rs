@@ -2,12 +2,10 @@
 //! 
 //! Thread-safe lockless writers and readers.
 
-use std::ops::Deref;
 use std::ptr::{null_mut, NonNull};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicPtr, Ordering};
 use crate::block::{Block, BlockArc, BLOCK_SIZE};
-use crate::lending_iterator::LendingIterator;
 use crate::reader::Reader;
 
 pub struct Queue<T> {
@@ -93,7 +91,7 @@ impl<T> Queue<T> {
         //    +1 counter for EventQueue::last_block (written on unlock_last_block)
         //    +1 counter for Block::next
         //    +1 counter for returned BlockArc 
-        let mut new_block = Block::with_counter(3).into_raw();
+        let new_block = Block::with_counter(3).into_raw();
 
         // 3. Connect new block with old
         last_block.next.store(new_block.as_ptr(), Ordering::Release);
@@ -111,7 +109,7 @@ impl<T> Queue<T> {
     
     /// Push value to queue.
     /// 
-    /// This is a blocking operation - you can't [blocking_push()] simultaneously 
+    /// This is a blocking operation - you can't `blocking_push` simultaneously 
     /// from different threads, but most of the time writers can push in parallel
     /// with this call. 
     /// 
@@ -132,7 +130,7 @@ impl<T> Queue<T> {
                     //    +1 counter for EventQueue::last_block (written on unlock_last_block)
                     //    +1 counter for Block::next
                     //    +1 counter for returned BlockArc 
-                    let mut new_block = Block::with_counter(3).into_raw();
+                    let new_block = Block::with_counter(3).into_raw();
             
                     // 3. Connect new block with old
                     last_block.next.store(new_block.as_ptr(), Ordering::Release);
@@ -172,9 +170,7 @@ impl<T> Queue<T> {
     #[inline]
     pub fn reader(&self) -> Reader<T> {
         let last_block = self.load_last_block();
-        let block_len = unsafe {
-            last_block.len.load(Ordering::Acquire)  
-        };
+        let block_len  = last_block.len.load(Ordering::Acquire);
         Reader {
             block: last_block,
             index: block_len,
@@ -197,7 +193,13 @@ impl<T> Drop for Queue<T> {
 /// Same as reader, writer internally keeps a block pointer.
 /// Which means it also prevents the whole queue after its block form being dropped. 
 /// Block pointer updated to the latest one on each [push()] or [update()].
-/// You also can just construct a new Writer for each write session. 
+/// You also can just construct a new Writer for each write session.
+///
+/// Constructed by [Queue::writer()].
+///
+/// [push()]: Self::push
+/// [update()]: Self::update
+/// [Queue::writer()]: crate::mpmc::Queue::writer
 pub struct Writer<T> {
     block: BlockArc<T>,
     event_queue: Arc<Queue<T>>
@@ -292,7 +294,7 @@ mod test_mpmc{
     fn test_event_queue() {
         let queue: Arc<Queue<usize>> = Default::default();
         let mut reader = queue.reader();
-        let mut writer = queue.writer();
+        //let mut writer = queue.writer();
         
         const COUNT: usize = BLOCK_SIZE * 4; 
         for i in 0..COUNT {
@@ -371,7 +373,7 @@ mod test_mpmc{
         }
         
         for join in joins{
-            join.join();    
+            join.join().unwrap();    
         }
         
         println!("s0 = {:}", rs0.load(Ordering::Acquire));

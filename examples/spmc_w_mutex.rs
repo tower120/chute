@@ -34,7 +34,7 @@ fn main() {
         
         // WRITE threads
         for t in 0..WRITERS {
-            let mut queue = queue.clone();
+            let queue = queue.clone();
             s.spawn(move || {
                 for i in 0..WRITER_MESSAGES {
                     queue.lock().push(t*WRITER_MESSAGES + i);

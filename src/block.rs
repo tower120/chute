@@ -1,5 +1,5 @@
 use std::alloc::{alloc, dealloc, handle_alloc_error, Layout};
-use std::{cmp, mem, ptr};
+use std::{mem, ptr};
 use std::cell::UnsafeCell;
 use std::mem::{ManuallyDrop, MaybeUninit};
 use std::ops::Deref;

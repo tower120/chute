@@ -1,9 +1,11 @@
 [package]
 name = "chute"
-version = "0.1.0"
+version = "0.1.0-alpha.1"
 edition = "2021"
+exclude = ["benchmarks", "doc"]
 description = "Lockfree mpmc/spmc multicast queue."
-keywords = ["lockfree", "mpmc", "spmc", "multicast", "queue"]
+categories = ["concurrency", "data-structures"]
+keywords   = ["lockfree", "mpmc", "spmc", "multicast", "queue"]
 
 [dependencies]
 branch_hints = "0.4"
