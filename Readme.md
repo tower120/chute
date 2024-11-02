@@ -1,6 +1,6 @@
 # chute
 
-![Queue illustration](doc/img/mpmc_white.png)
+![Queue illustration](doc/img/mpmc_white.svg)
 
 An mpmc[^mpmc]/spmc[^spmc] lock-free multicast[^broadcast] queue.
 
@@ -46,8 +46,8 @@ std::thread::scope(|s| {
         s.spawn(move || {
             let mut sum = 0;
             for _ in 0..MESSAGES {
-                // Since this is a queue, not a channel - there is no "waiter".
-                // So we just spin around next().
+                // Since this is a queue, not a channel - 
+                // we just spin around next().
                 let msg = loop {
                     if let Some(msg) = reader.next() {
                         break msg;

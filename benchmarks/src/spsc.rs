@@ -4,7 +4,6 @@ use charming::component::{Axis, Grid, Legend, Title};
 use charming::element::{AxisLabel, AxisType, Formatter, Label, LabelPosition};
 use charming::element::font_settings::FontWeight;
 use charming::series::{Bar, Series};
-use charming::theme::Theme;
 use str_macro::str;
 use crate::{read_estimate};
 use crate::CHART_WIDTH;

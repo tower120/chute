@@ -50,7 +50,7 @@ fn read_group(dir_name: &Path, writers: &[usize], readers: &[usize]) -> Estimate
 
 const CHART_THEME: Theme = Theme::Default;
 const CHART_BACKGROUND: &str = "#FFFFFF";
-const CHART_WIDTH: u32 = 600;
+const CHART_WIDTH: u32 = 570;
 
 fn main(){
     #[derive(Eq, PartialEq)]

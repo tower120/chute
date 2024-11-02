@@ -9,7 +9,6 @@ use charming::component::Title;
 use str_macro::str;
 use std::string::String;
 use charming::element::font_settings::{FontFamily, FontStyle, FontWeight};
-use charming::theme::Theme;
 use crate::{read_group, EstimatesMPMC};
 use crate::CHART_WIDTH;
 use crate::CHART_THEME;
