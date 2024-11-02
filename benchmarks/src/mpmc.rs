@@ -8,6 +8,7 @@ use charming::component::{Legend};
 use charming::component::Title;
 use str_macro::str;
 use std::string::String;
+use charming::element::font_settings::{FontFamily, FontStyle, FontWeight};
 use charming::theme::Theme;
 use crate::{read_group, EstimatesMPMC};
 use crate::CHART_WIDTH;
@@ -84,7 +85,12 @@ pub fn chart(
                     .map(|(name,_)| name.clone())
                     .collect()
                 )
-                .axis_label(AxisLabel::new().show(true).font_size(14))
+                .axis_label(
+                    AxisLabel::new().show(true)
+                        .font_size(13)
+                        .font_weight(FontWeight::Bolder)
+                        .color("#666666")
+                )
         )    
         .x_axis(
             Axis::new()
@@ -123,5 +129,5 @@ pub fn chart(
     
     let mut renderer = ImageRenderer::new(CHART_WIDTH, 340).theme(CHART_THEME);
     renderer.save(&chart, fname.as_ref().with_extension("svg")).unwrap();
-    renderer.save_format(charming::ImageFormat::Png, &chart, fname.as_ref().with_extension("png"));    
+    renderer.save_format(charming::ImageFormat::Png, &chart, fname.as_ref().with_extension("png")).unwrap();    
 }

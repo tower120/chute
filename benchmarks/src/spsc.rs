@@ -2,6 +2,7 @@ use std::path::Path;
 use charming::{Chart, ImageRenderer};
 use charming::component::{Axis, Grid, Legend, Title};
 use charming::element::{AxisLabel, AxisType, Formatter, Label, LabelPosition};
+use charming::element::font_settings::FontWeight;
 use charming::series::{Bar, Series};
 use charming::theme::Theme;
 use str_macro::str;
@@ -68,7 +69,13 @@ pub fn chart(
                     .map(|(name,_)| name.clone())
                     .collect()
                 )
-                .axis_label(AxisLabel::new().show(true).font_size(14))
+                .axis_label(
+                    AxisLabel::new()
+                        .show(true)
+                        .font_size(13)
+                        .font_weight(FontWeight::Bolder)
+                        .color("#666666")
+                )
         )    
         .x_axis(
             Axis::new()
@@ -108,5 +115,5 @@ pub fn chart(
     
     let mut renderer = ImageRenderer::new(CHART_WIDTH, 180).theme(CHART_THEME);
     renderer.save(&chart, fname.as_ref().with_extension("svg")).unwrap();
-    renderer.save_format(charming::ImageFormat::Png, &chart, fname.as_ref().with_extension("png"));    
+    renderer.save_format(charming::ImageFormat::Png, &chart, fname.as_ref().with_extension("png")).unwrap();    
 }
