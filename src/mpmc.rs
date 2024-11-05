@@ -2,6 +2,7 @@
 //! 
 //! Thread-safe lockless writers and readers.
 
+use std::marker::PhantomData;
 use std::ptr::{null_mut, NonNull};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicPtr, Ordering};
@@ -10,13 +11,15 @@ use crate::reader::Reader;
 
 pub struct Queue<T> {
     last_block: AtomicPtr<Block<T>>,
+    phantom_data: PhantomData<T>
 }
 
 impl<T> Default for Queue<T> {
     #[inline]
     fn default() -> Self {
         Self {
-            last_block: AtomicPtr::new(Block::new().into_raw().as_ptr()),
+            last_block: AtomicPtr::new(Block::<T>::new().into_raw().as_ptr()),
+            phantom_data: PhantomData
         }   
     }
 }
@@ -69,12 +72,11 @@ impl<T> Queue<T> {
     #[inline]
     fn insert_block(&self) -> (BlockArc<T>, bool) {
         // 1. Lock
-        let last_block = unsafe{ self.lock_last_block().as_mut() };
+        let last_block = self.lock_last_block();
+        let last_block_ref = unsafe{ last_block.as_ref() };
         
         //if last_block.len.load(Ordering::Acquire) < BLOCK_SIZE {
-        if last_block.load_packed(Ordering::Acquire).occupied_len < BLOCK_SIZE as _ {
-            let last_block = NonNull::from(last_block);
-            
+        if last_block_ref.load_packed(Ordering::Acquire).occupied_len < BLOCK_SIZE as _ {
             // Arc counter ++
             let arc = unsafe { 
                 Block::inc_use_count(last_block);
@@ -85,7 +87,7 @@ impl<T> Queue<T> {
             self.unlock_last_block(last_block);
             
             return (arc, false);
-        } 
+        }
         
         // 2. Make new block
         //    +1 counter for EventQueue::last_block (written on unlock_last_block)
@@ -94,11 +96,11 @@ impl<T> Queue<T> {
         let new_block = Block::with_counter(3).into_raw();
 
         // 3. Connect new block with old
-        last_block.next.store(new_block.as_ptr(), Ordering::Release);
+        last_block_ref.next.store(new_block.as_ptr(), Ordering::Release);
         
         // 4. Arc -- old block
         unsafe{
-            Block::dec_use_count(last_block.into());
+            Block::dec_use_count(last_block);
         }
         
         // 5. Set new block as last, and release lock.
@@ -125,7 +127,7 @@ impl<T> Queue<T> {
             #[cold]
             #[inline(never)]
             fn insert_block_and_push<T>(this: &Queue<T>, last_block: &Block<T>, value: T){
-                let new_block = {
+                let mut new_block = {
                     // 2. Make new block
                     //    +1 counter for EventQueue::last_block (written on unlock_last_block)
                     //    +1 counter for Block::next
@@ -182,8 +184,7 @@ impl<T> Drop for Queue<T> {
     fn drop(&mut self) {
         let last_block = self.last_block.load(Ordering::Acquire);
         unsafe{
-            let arc = BlockArc::from_raw(NonNull::new_unchecked(last_block));
-            drop(arc);
+            Block::dec_use_count(NonNull::new_unchecked(last_block));
         }
     }
 }
@@ -291,7 +292,7 @@ mod test_mpmc{
     use crate::mpmc::Queue;
 
     #[test]
-    fn test_event_queue() {
+    fn test_mpmc() {
         let queue: Arc<Queue<usize>> = Default::default();
         let mut reader = queue.reader();
         //let mut writer = queue.writer();
@@ -309,8 +310,10 @@ mod test_mpmc{
         assert_equal(vec, 0..COUNT);
     }
     
+    // TODO: Fuzzy test version of this with variable readers/writers count.
+    //       And variable read/write count as well. 
     #[test]
-    fn test_event_queue_mt() {
+    fn test_mpmc_mt() {
         let queue: Arc<Queue<usize>> = Default::default();
         let mut reader0 = queue.reader();
         let mut reader1 = queue.reader();
@@ -319,15 +322,16 @@ mod test_mpmc{
         
         let mut joins = Vec::new();
         
+        const COUNT: usize = BLOCK_SIZE * 8;
+        
         joins.push(std::thread::spawn(move || {
-            for i in 0..2000{
+            for i in 0..COUNT/2{
                 writer0.push(i);
-                //std::thread::yield_now();
             }
         }));
         
         joins.push(std::thread::spawn(move || {
-            for i in 2000..4000{
+            for i in COUNT/2..COUNT{
                 writer1.push(i);
             }
         }));
@@ -343,7 +347,7 @@ mod test_mpmc{
                         sum += value;
                         
                         i += 1;
-                        if i == 4000 {
+                        if i == COUNT {
                             break;
                         }
                     }
@@ -363,7 +367,7 @@ mod test_mpmc{
                         sum += value;
                         
                         i += 1;
-                        if i == 4000 {
+                        if i == COUNT {
                             break;
                         }
                     }
@@ -376,7 +380,8 @@ mod test_mpmc{
             join.join().unwrap();    
         }
         
-        println!("s0 = {:}", rs0.load(Ordering::Acquire));
-        println!("s1 = {:}", rs1.load(Ordering::Acquire));
+        let sum = (0..COUNT).sum();
+        assert_eq!(rs0.load(Ordering::Acquire), sum);
+        assert_eq!(rs1.load(Ordering::Acquire), sum);
     }    
 }

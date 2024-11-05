@@ -1,4 +1,4 @@
-name: Rust
+name: CI
 
 on:
   workflow_dispatch:
@@ -22,12 +22,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - name: Build & run examples
-      run: RUSTFLAGS="--deny warnings" cargo run --examples
+    - name: Examples
+      run: RUSTFLAGS="--deny warnings" cargo build --examples
 
   test:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4      
-    - name: Run tests
+    - name: Tests
       run: cargo test
+
+  miri:
+    runs-on: ubuntu-latest
+    steps:
+    - name: MIRI
+    - uses: dtolnay/rust-toolchain@nightly 
+    - uses: actions/checkout@v4      
+    - run: 
+        run: cargo +nightly miri test

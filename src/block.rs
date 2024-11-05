@@ -1,13 +1,14 @@
 use std::alloc::{alloc, dealloc, handle_alloc_error, Layout};
 use std::{mem, ptr};
 use std::cell::UnsafeCell;
+use std::marker::PhantomData;
 use std::mem::{ManuallyDrop, MaybeUninit};
 use std::ops::Deref;
 use std::ptr::{null_mut, NonNull};
 use std::sync::atomic::{AtomicPtr, AtomicU64, AtomicUsize, Ordering};
 use branch_hints::unlikely;
 
-pub(crate) const BLOCK_SIZE: usize = 4096;
+pub(crate) const BLOCK_SIZE: usize = if cfg!(miri) { 128 } else { 4096 };
 
 #[derive(Default, Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Packed {
@@ -86,7 +87,7 @@ pub(crate) struct Block<T> {
     use_count : AtomicUsize,           // When decreases to 0 - frees itself
     pub next  : AtomicPtr<Self>,
     
-    pub mem : UnsafeCell<[MaybeUninit<T>; BLOCK_SIZE]>,
+    /*pub*/ mem : UnsafeCell<[MaybeUninit<T>; BLOCK_SIZE]>,
 }
 
 impl<T> Block<T>{
@@ -154,10 +155,7 @@ impl<T> Block<T>{
     
     #[inline]
     pub fn mem(&self) -> *const T {
-        unsafe{
-            let mem = &mut *self.mem.get();
-            mem.as_ptr().cast()
-        }
+        self.mem.get().cast()
     }
     
     #[inline]
@@ -208,9 +206,9 @@ impl<T> Block<T>{
         }
 
         unsafe{
-            let mem = &mut *self.mem.get();
+            let mem = self.mem().cast_mut();
             let index = occupied_len;
-            mem.get_unchecked_mut(index).write(value);
+            mem.add(index).write(value);
         }
         
         // Just Release?
@@ -232,13 +230,14 @@ impl<T> Block<T>{
 }
 
 pub(crate) struct BlockArc<T> {
-    ptr: NonNull<Block<T>>    
+    ptr: NonNull<Block<T>>,
+    phantom_data: PhantomData<T>
 }
 unsafe impl<T> Send for BlockArc<T> {}
 impl<T> BlockArc<T>{
     #[inline]
     pub unsafe fn from_raw(ptr: NonNull<Block<T>>) -> Self {
-        Self{ptr}
+        Self{ptr, phantom_data: PhantomData}
     }
     
     #[inline]
@@ -248,7 +247,7 @@ impl<T> BlockArc<T>{
     }
     
     #[inline]
-    pub fn as_non_null(&self) -> NonNull<Block<T>> {
+    pub fn as_non_null(&mut self) -> NonNull<Block<T>> {
         self.ptr
     }
 }
@@ -266,7 +265,7 @@ impl<T> Clone for BlockArc<T> {
         unsafe{
             Block::inc_use_count(self.ptr)
         }
-        Self{ptr: self.ptr}
+        Self{ptr: self.ptr, phantom_data: PhantomData}
     }
 }
 impl<T> Drop for BlockArc<T> {
