@@ -76,6 +76,7 @@ impl<T> Queue<T> {
     }
 }
 
+#[cfg(test)]
 mod test{
     use std::sync::Arc;
     use std::sync::atomic::{AtomicUsize, Ordering};
