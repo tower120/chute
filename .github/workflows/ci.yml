@@ -38,5 +38,4 @@ jobs:
     - name: MIRI
     - uses: dtolnay/rust-toolchain@nightly 
     - uses: actions/checkout@v4      
-    - run: 
-        run: cargo +nightly miri test
+      run: cargo +nightly miri test
