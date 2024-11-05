@@ -12,30 +12,30 @@ env:
 
 jobs:
   build:
+    name: build    
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - name: Build
       run: RUSTFLAGS="--deny warnings" cargo build
 
   examples:
+    name: examples
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - name: Examples
+    - uses: actions/checkout@v4    
       run: RUSTFLAGS="--deny warnings" cargo build --examples
 
   test:
+    name: tests
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4      
-    - name: Tests
+    - uses: actions/checkout@v4          
       run: cargo test
 
   miri:
+    name: miri
     runs-on: ubuntu-latest
-    steps:
-    - name: MIRI
+    steps:    
     - uses: dtolnay/rust-toolchain@nightly 
     - uses: actions/checkout@v4      
       run: cargo +nightly miri test
