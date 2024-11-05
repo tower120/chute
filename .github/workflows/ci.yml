@@ -26,11 +26,12 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
+    - uses: dtolnay/rust-toolchain@nightly
     - uses: taiki-e/install-action@v2
       with:
         tool: cargo-careful      
     - uses: actions/checkout@v4
-    - run: cargo careful test
+    - run: cargo +nightly careful test
 
   miri:
     runs-on: ubuntu-latest
