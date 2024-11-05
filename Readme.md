@@ -3,6 +3,7 @@
 [![crates.io](https://img.shields.io/crates/v/chute.svg)](https://crates.io/crates/chute)
 [![license](https://img.shields.io/badge/license-Apache--2.0_OR_MIT-blue?style=flat-square)](#license)
 [![Docs](https://docs.rs/hi_sparse_bitset/badge.svg)](https://docs.rs/chute)
+[![CI](https://github.com/tower120/chute/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/tower120/chute/actions/workflows/ci.yml)
 
 ![Queue illustration](doc/img/mpmc_white.png)
 
