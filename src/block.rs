@@ -87,6 +87,8 @@ pub(crate) struct Block<T> {
     use_count : AtomicUsize,           // When decreases to 0 - frees itself
     pub next  : AtomicPtr<Self>,
     
+    pub hi_bitblock: AtomicU64,
+    pub bit_blocks: [AtomicU64; BLOCK_SIZE/64],
     /*pub*/ mem : UnsafeCell<[MaybeUninit<T>; BLOCK_SIZE]>,
 }
 
@@ -104,6 +106,9 @@ impl<T> Block<T>{
             (*ptr).packed = Default::default();
             (*ptr).use_count = AtomicUsize::new(counter);
             (*ptr).next = AtomicPtr::new(null_mut());
+            
+            (*ptr).hi_bitblock = AtomicU64::new(0);
+            (*ptr).bit_blocks = core::array::from_fn(|_|AtomicU64::new(0)); 
         
             BlockArc::from_raw(NonNull::new_unchecked(ptr))
         }
@@ -227,6 +232,38 @@ impl<T> Block<T>{
         
         Ok(())
     }
+    
+    #[inline]
+    pub fn try_push2(&self, value: T) -> Result<(), T> {
+        // TODO: use len for this
+        let Packed{ occupied_len, .. } = self.packed.fetch_add(
+            Packed{ occupied_len: 1, writers: 0 }.into(),
+            Ordering::AcqRel
+        ).into();
+        let occupied_len = occupied_len as usize;
+        
+        if unlikely(occupied_len >= BLOCK_SIZE) {
+            return Err(value);
+        }
+
+        let index = occupied_len;
+        unsafe{
+            let mem = self.mem().cast_mut();
+            mem.add(index).write(value);
+        }
+
+        // Update bitblock
+        {
+            let bit_block_index = index / 64;
+            let bit_index = index % 64;
+            
+            let bitmask = 1 << bit_index;
+            let atomic_block = unsafe{ self.bit_blocks.get_unchecked(bit_block_index) };
+            atomic_block.fetch_or(bitmask, Ordering::Release);
+        }
+        
+        Ok(())
+    }    
 }
 
 pub(crate) struct BlockArc<T> {

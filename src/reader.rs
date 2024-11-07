@@ -24,6 +24,7 @@ use crate::lending_iterator::LendingIterator;
 /// reader is mutated. This means the value is guaranteed to live until the next 
 /// read operation, at which point the block may change, and the old block could 
 /// be destructed.
+#[derive(Clone)]
 pub struct Reader<T>{
     pub(crate) block: BlockArc<T>,
     pub(crate) index: usize,

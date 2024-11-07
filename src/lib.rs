@@ -28,3 +28,6 @@ pub use lending_iterator::*;
 
 mod reader;
 pub use reader::*;
+
+// TEST
+pub mod mpmc2;
