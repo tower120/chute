@@ -384,6 +384,7 @@ mod test_mpmc{
     use std::sync::Arc;
     use std::sync::atomic::{AtomicUsize, Ordering};
     use itertools::assert_equal;
+    use rand::{Rng, SeedableRng};
     use crate::block::BLOCK_SIZE;
     use crate::LendingReader;
     use crate::mpmc::Queue;
@@ -408,78 +409,66 @@ mod test_mpmc{
         assert_equal(vec, 0..COUNT);
     }
     
-    // TODO: Fuzzy test version of this with variable readers/writers count.
-    //       And variable read/write count as well. 
-    #[test]
-    fn test_mpmc_mt() {
+    fn test_mpmc_mt(wt: usize, rt: usize, len: usize) {
         let queue: Arc<Queue<usize>> = Default::default();
-        let mut reader0 = queue.reader();
-        let mut reader1 = queue.reader();
-        let mut writer0 = queue.writer();
-        let mut writer1 = queue.writer();
-        
-        let mut joins = Vec::new();
-        
-        const COUNT: usize = BLOCK_SIZE*8 + 200;
-        
-        joins.push(std::thread::spawn(move || {
-            for i in 0..COUNT /2  {
-                writer0.push(i);
-            }
-        }));
-        
-        joins.push(std::thread::spawn(move || {
-            for i in COUNT/2..COUNT{
-                writer1.push(i);
-            }
-        }));
 
-        let rs0: Arc<AtomicUsize> = Default::default();
-        {
-            let rs0 = rs0.clone();
+        let mut joins = Vec::new();
+
+        // Readers
+        let control_sum = (0..len).sum();        
+        for _ in 0..rt { 
+            let mut reader = queue.reader();
             joins.push(std::thread::spawn(move || {
                 let mut sum = 0;
                 let mut i = 0;
                 loop {
-                    if let Some(value) = reader0.next() {
+                    if let Some(value) = reader.next() {
                         sum += value;
                         
                         i += 1;
-                        if i == COUNT {
+                        if i == len {
                             break;
                         }
                     }
                 }
-                rs0.store(sum, Ordering::Release);
+                assert_eq!(sum, control_sum);
             }));
         }
-
-        let rs1: Arc<AtomicUsize> = Default::default();
-        {
-            let rs1 = rs1.clone();
+        
+        // Writers
+        for t in 0..wt {
+            let messages = len/wt;
+            let mut writer = queue.writer();
+            let mut queue = queue.clone();
             joins.push(std::thread::spawn(move || {
-                let mut sum = 0;
-                let mut i = 0;
-                loop {
-                    if let Some(value) = reader1.next() {
-                        sum += value;
-                        
-                        i += 1;
-                        if i == COUNT {
-                            break;
-                        }
-                    }
+                for i in t*messages..(t+1)*messages {
+                    writer.push(i);
                 }
-                rs1.store(sum, Ordering::Release);
             }));
         }
         
         for join in joins{
             join.join().unwrap();    
         }
+    }
+    
+    #[test]
+    fn fuzzy_mpmc(){
+        const MAX_THREADS: usize = 16;
+        const RANGE: usize = BLOCK_SIZE * 10;
+        const REPEATS: usize = 100;
         
-        let sum = (0..COUNT).sum();
-        assert_eq!(rs0.load(Ordering::Acquire), sum);
-        assert_eq!(rs1.load(Ordering::Acquire), sum);
-    }    
+        let mut rng = rand::rngs::StdRng::seed_from_u64(0xe15bb9db3dee3a0f);
+        for _ in 0..REPEATS {
+            let wt = rng.gen_range(1..=MAX_THREADS);
+            let rt = rng.gen_range(1..=MAX_THREADS);
+            let len = rng.gen_range(0..RANGE) / wt * wt;
+            test_mpmc_mt(wt, rt, len);
+        }
+    }
+
+    #[test]
+    fn test_mpmc_mt_1() {
+        test_mpmc_mt(2, 1, 4000);
+    }
 }
