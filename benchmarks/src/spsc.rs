@@ -87,6 +87,7 @@ pub fn chart(
             .label(
                 Label::new()
                 .show(true)
+                .font_weight(FontWeight::Bold)
                 .position(LabelPosition::InsideRight)
                 .formatter(Formatter::Function(
                     (
