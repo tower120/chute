@@ -1,6 +1,6 @@
 //! Write from one thread, read from multiple threads.
 
-use chute::{LendingIterator};
+use chute::LendingReader;
 
 fn main() {
     const MESSAGES : usize = 400;

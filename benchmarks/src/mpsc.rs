@@ -5,30 +5,20 @@ use crate::{read_group, EstimatesMPMC};
 use crate::mpmc;
 
 pub fn mpsc(dir_name: impl AsRef<Path>) {
-    let dir_name = dir_name.as_ref();
-    
     let wts = [1,2,4,8];
     let rts = [1];
-    
-    let chute_spmc_w_mutex = read_group(
-        &std::path::Path::new(dir_name).join("chute__spmc_mutex")
-        ,&wts, &rts
-    );
-    
-    let chute_mpmc = read_group(
-        &std::path::Path::new(dir_name).join("chute__mpmc")
-        ,&wts, &rts
-    );
-    
-    let crossbeam_unbounded = read_group(
-        &std::path::Path::new(dir_name).join("crossbeam__unbounded")
-        ,&wts, &rts
-    );
+    let read = |dir: &str| -> EstimatesMPMC {
+        read_group(
+            &std::path::Path::new(dir_name.as_ref()).join(dir)
+            ,&wts, &rts
+        )
+    };
     
     let all: Vec<(String, EstimatesMPMC)> = vec![
-        (str!("chute::spmc\nw/ mutex"), chute_spmc_w_mutex),
-        (str!("chute::mpmc"), chute_mpmc),
-        (str!("crossbeam::\nunbounded"), crossbeam_unbounded),
+        (str!("chute::spmc\nw/ mutex"), read("chute__spmc_mutex")),
+        (str!("chute::mpmc"), read("chute__mpmc")),
+        (str!("crossbeam::\nunbounded"), read("crossbeam__unbounded")),
+        (str!("flume::\nunbounded"), read("flume__unbounded")),
     ];
     
     mpmc::chart(&all, 1, str!("mpsc"), "out/mpsc");

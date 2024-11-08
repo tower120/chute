@@ -3,7 +3,7 @@
 //! This is faster than mpmc version, when "writers" do not write simultaneously.
 
 use std::sync::Arc;
-use chute::{LendingIterator};
+use chute::LendingReader;
 
 fn main() {
     const WRITERS         : usize = 4;

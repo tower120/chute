@@ -1,6 +1,6 @@
 //! Multiple-producers, single-consumer
 
-use chute::LendingIterator;
+use chute::LendingReader;
 use arrayvec::ArrayVec;
 use criterion::{criterion_group, criterion_main, Criterion, Throughput};
 use std::sync::Arc;
@@ -100,6 +100,32 @@ pub fn crossbeam_unbounded(writer_threads: usize){
     }
 }
 
+pub fn flume_unbounded(writer_threads: usize){
+    let (tx, rx) = flume::unbounded();
+    
+    let mut joins: ArrayVec<_, 64> = Default::default();
+    
+    let writer_messages = COUNT/writer_threads;
+    for _ in 0..writer_threads {
+        let tx = tx.clone();
+        joins.push(std::thread::spawn(move || {
+            for i in 0..writer_messages {
+                tx.send(message::new(i)).unwrap();
+            }
+        }));
+    }
+    
+    joins.push(std::thread::spawn(move || {
+        for _ in 0..COUNT {
+            rx.recv().unwrap();
+        }
+    }));        
+    
+    for join in joins{
+        join.join().unwrap();
+    }
+}
+
 fn criterion_benchmark(c: &mut Criterion) {
     use criterion::BenchmarkId;
     
@@ -118,6 +144,10 @@ fn criterion_benchmark(c: &mut Criterion) {
         group.bench_with_input(BenchmarkId::new("crossbeam::unbounded", parameter_string.clone()), &wt
            , |b, wt| b.iter(|| crossbeam_unbounded(*wt))
         );
+        
+        group.bench_with_input(BenchmarkId::new("flume::unbounded", parameter_string.clone()), &wt
+           , |b, wt| b.iter(|| flume_unbounded(*wt))
+        );        
     }
     group.finish();
 }

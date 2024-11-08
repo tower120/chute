@@ -6,8 +6,9 @@ use std::marker::PhantomData;
 use std::ptr::{null_mut, NonNull};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicPtr, Ordering};
+use branch_hints::unlikely;
 use crate::block::{Block, BlockArc, BLOCK_SIZE};
-use crate::reader::Reader;
+use crate::LendingReader;
 
 pub struct Queue<T> {
     last_block: AtomicPtr<Block<T>>,
@@ -75,8 +76,7 @@ impl<T> Queue<T> {
         let last_block = self.lock_last_block();
         let last_block_ref = unsafe{ last_block.as_ref() };
         
-        //if last_block.len.load(Ordering::Acquire) < BLOCK_SIZE {
-        if last_block_ref.load_packed(Ordering::Acquire).occupied_len < BLOCK_SIZE as _ {
+        if last_block_ref.len.load(Ordering::Acquire) < BLOCK_SIZE {
             // Arc counter ++
             let arc = unsafe { 
                 Block::inc_use_count(last_block);
@@ -168,6 +168,7 @@ impl<T> Queue<T> {
         }
     }
     
+    /// [Reader] will receive all messages that are pushed AFTER this call.
     #[must_use]
     #[inline]
     pub fn reader(&self) -> Reader<T> {
@@ -177,10 +178,12 @@ impl<T> Queue<T> {
             block: last_block,
             index: block_len,
             len:   block_len,
+            bitblock_index: block_len/64
         }
     }
 }
 impl<T> Drop for Queue<T> {
+    #[inline]
     fn drop(&mut self) {
         let last_block = self.last_block.load(Ordering::Acquire);
         unsafe{
@@ -272,7 +275,6 @@ impl<T> Writer<T> {
         }
     }    
 
-    // TODO: return something, signaling that queue len was increased.
     #[inline]
     pub fn push(&mut self, value: T) {
         let inserted = self.block.try_push(value);
@@ -282,13 +284,108 @@ impl<T> Writer<T> {
     }
 }
 
+/// Queue consumer.
+/// 
+/// Constructed by [Queue::reader()].
+pub struct Reader<T>{
+    pub(crate) block: BlockArc<T>,
+    pub(crate) index: usize,
+    pub(crate) len  : usize,
+    pub(crate) bitblock_index  : usize,
+}
+
+impl<T> Clone for Reader<T> {
+    #[inline]
+    fn clone(&self) -> Self {
+        Self{
+            block: self.block.clone(),
+            index: self.index,
+            len  : self.len,
+            bitblock_index: self.bitblock_index
+        }
+    }
+}
+
+impl<T> LendingReader for Reader<T> {
+    type Item = T;
+
+    #[inline]
+    fn next(&mut self) -> Option<&T> {
+        if self.index == self.len {
+            if unlikely(self.len == BLOCK_SIZE) {
+                // fetch next block, release current
+                if let Some(next_block) = self.block.try_load_next(Ordering::Acquire) {
+
+                    self.index = 0;
+
+                    // 10-15% preformance gain with this on seq read.
+                    // Optimization for occasional readers - that traverse
+                    // several blocks at once, once in a while.
+                    //
+                    // Relaxed - because not catching this case is safe. 
+                    if !next_block.next.load(Ordering::Relaxed).is_null() {
+                        self.block = next_block;
+                        self.len = BLOCK_SIZE;
+                        self.bitblock_index = 64;
+                    } else {
+                        let bit_block = unsafe {
+                            next_block.bit_blocks.get_unchecked(0)
+                        }.load(Ordering::Acquire);
+    
+                        self.block = next_block;
+                        self.len   = bit_block.trailing_ones() as usize;
+                        self.bitblock_index = if bit_block == u64::MAX {1} else {0};
+                        
+                        // TODO: Disallow empty blocks?
+                        if self.len == 0 {
+                            return None;
+                        }
+                    }
+                } else {
+                    return None;
+                }
+            } else {
+                // Reread len.
+                // This is a synchronization point. `mem` data should be in 
+                // current thread visibility, after an atomic load. 
+                    
+                let bit_block = unsafe {
+                    self.block.bit_blocks.get_unchecked(self.bitblock_index)
+                }.load(Ordering::Acquire);
+                
+                let new_len = self.bitblock_index*64 + bit_block.trailing_ones() as usize;
+                
+                if self.len == new_len {
+                    // nothing changed.
+                    return None;
+                } 
+                
+                // Switch to next bitblock.
+                // Do not check for >=BLOCK_SIZE. That will happen later.
+                if bit_block == u64::MAX {
+                    self.bitblock_index = self.bitblock_index + 1;
+                }
+                
+                self.len = new_len;
+            }
+        }
+        
+        unsafe{
+            let value = &*self.block.mem().add(self.index);
+            self.index += 1;
+            Some(value)
+        }
+    }
+}
+
+
 #[cfg(test)]
 mod test_mpmc{
     use std::sync::Arc;
     use std::sync::atomic::{AtomicUsize, Ordering};
     use itertools::assert_equal;
     use crate::block::BLOCK_SIZE;
-    use crate::lending_iterator::LendingIterator;
+    use crate::LendingReader;
     use crate::mpmc::Queue;
 
     #[test]
@@ -305,6 +402,7 @@ mod test_mpmc{
         
         let mut vec = Vec::new();
         while let Some(value) = reader.next() {
+            //println!("{value}");
             vec.push(value.clone());
         }
         assert_equal(vec, 0..COUNT);
@@ -322,10 +420,10 @@ mod test_mpmc{
         
         let mut joins = Vec::new();
         
-        const COUNT: usize = BLOCK_SIZE * 8;
+        const COUNT: usize = BLOCK_SIZE*8 + 200;
         
         joins.push(std::thread::spawn(move || {
-            for i in 0..COUNT/2{
+            for i in 0..COUNT /2  {
                 writer0.push(i);
             }
         }));
@@ -335,7 +433,7 @@ mod test_mpmc{
                 writer1.push(i);
             }
         }));
-        
+
         let rs0: Arc<AtomicUsize> = Default::default();
         {
             let rs0 = rs0.clone();

@@ -8,7 +8,7 @@ use std::sync::atomic::Ordering;
 use std::ops::Deref;
 use branch_hints::unlikely;
 use crate::block::{Block, BlockArc, BLOCK_SIZE};
-use crate::reader::Reader;
+use crate::LendingReader;
 
 pub struct Queue<T>{
     last_block: BlockArc<T>
@@ -76,13 +76,77 @@ impl<T> Queue<T> {
     }
 }
 
+/// Queue consumer.
+/// 
+/// Constructed by [Queue::reader()].
+pub struct Reader<T>{
+    pub(crate) block: BlockArc<T>,
+    pub(crate) index: usize,
+    pub(crate) len  : usize,
+}
+
+impl<T> Clone for Reader<T> {
+    #[inline]
+    fn clone(&self) -> Self {
+        Self{
+            block: self.block.clone(),
+            index: self.index,
+            len  : self.len,
+        }
+    }
+}
+
+impl<T> LendingReader for Reader<T>{
+    type Item = T;
+
+    #[inline]
+    fn next(&mut self) -> Option<&T> {
+        if self.index == self.len {
+            if unlikely(self.len == BLOCK_SIZE) {
+                // fetch next block, release current
+                if let Some(next_block) = self.block.try_load_next(Ordering::Acquire) {
+                    self.index = 0;
+                    self.len   = next_block.len.load(Ordering::Acquire);
+                    self.block = next_block;
+                    
+                    // TODO: Disallow empty blocks?
+                    if self.len == 0 {
+                        return None;
+                    }
+                } else {
+                    return None;
+                }
+            } else {
+                // Reread len.
+                // This is synchronization point. `mem` data should be in 
+                // current thread visibility, after `len` atomic load. 
+                // In analogue with spin-lock.
+                let block_len = self.block.len.load(Ordering::Acquire);
+                if self.len == block_len {
+                    // nothing changed.
+                    return None;
+                } 
+                self.len = block_len;
+            }
+        }
+        
+        unsafe{
+            let value = &*self.block.mem().add(self.index);
+            self.index += 1;
+            Some(value)
+        }
+    }
+}
+
+
+
 #[cfg(test)]
 mod test{
     use std::sync::Arc;
     use std::sync::atomic::{AtomicUsize, Ordering};
     use crate::block::BLOCK_SIZE;
     use crate::spmc::Queue;
-    use crate::lending_iterator::LendingIterator;
+    use crate::LendingReader;
 
     // TODO: fuzzy version, same as with mpmc.
     #[test]
@@ -98,7 +162,6 @@ mod test{
         joins.push(std::thread::spawn(move || {
             for i in 0..COUNT{
                 queue.lock().push(i);
-                //std::thread::yield_now();
             }
         }));
         

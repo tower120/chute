@@ -1,4 +1,4 @@
-use chute::LendingIterator;
+use chute::LendingReader;
 use criterion::{criterion_group, criterion_main, Criterion};
 
 mod common;
@@ -43,11 +43,25 @@ pub fn crossbeam_unbounded() {
     }        
 }
 
+pub fn flume_unbounded() {
+    let (tx, rx) = flume::unbounded();
+    
+    for i in 0..COUNT {
+        tx.send(message::new(i)).unwrap();
+    }
+
+    for _ in 0..COUNT {
+        rx.recv().unwrap();
+    }        
+}
+
+
 fn criterion_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("seq");
     group.bench_function("chute::spmc", |b| b.iter(|| chute_spmc()));
     group.bench_function("chute::mpmc", |b| b.iter(|| chute_mpmc()));
     group.bench_function("crossbeam::unbounded", |b| b.iter(|| crossbeam_unbounded()));
+    group.bench_function("flume::unbounded", |b| b.iter(|| flume_unbounded()));
     group.finish();
 }
 
