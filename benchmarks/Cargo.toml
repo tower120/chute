@@ -8,12 +8,16 @@ chute = {path = "../"}
 criterion = {version ="0.5"}
 arrayvec = "0.7"
 crossbeam = "0.8"
+# "spin" looks mandatory on Windows. Without it perforamce is way too slow.
+flume = { version = "0.11", features = ["spin"] }
 spin = "0.9"
-tokio = {version = "1.41", features = ["sync"]}
+# "parking_lot" should improve performance. (Thou it is not observable)
+tokio = { version = "1.41", features = ["sync", "parking_lot"] }
 json = "0.12"
 str-macro = "1"
-#charming = { version = "0.4", features = ["ssr"] }
+# In this version implemented https://github.com/yuankunzhang/charming/issues/111. 
 charming = { git = "https://github.com/yuankunzhang/charming.git", rev = "aa18c23d752f32eeccad1ce40f6e85358bf8d5f1", features = ["ssr"] }
+#charming = { version = "0.4", features = ["ssr"] }
 
 [[bench]]
 name = "mpmc"

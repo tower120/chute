@@ -11,24 +11,17 @@ use crate::CHART_THEME;
 use crate::CHART_BACKGROUND;
 
 pub fn spsc(dir_name: impl AsRef<Path>) {
-    let dir_name = dir_name.as_ref();
-    
-    let chute_spmc = read_estimate(
-        &std::path::Path::new(dir_name).join("chute__spmc")
-    );
-    
-    let chute_mpmc = read_estimate(
-        &std::path::Path::new(dir_name).join("chute__mpmc")
-    );
-    
-    let crossbeam_unbounded = read_estimate(
-        &std::path::Path::new(dir_name).join("crossbeam__unbounded")
-    );
+    let read = |dir: &str| -> f64 {
+        read_estimate(
+            &std::path::Path::new(dir_name.as_ref()).join(dir)
+        )
+    };
     
     let all: Vec<(String, f64)> = vec![
-        (str!("chute::spmc"), chute_spmc),
-        (str!("chute::mpmc"), chute_mpmc),
-        (str!("crossbeam::\nunbounded")/*str!("crossbeam")*/, crossbeam_unbounded),
+        (str!("chute::spmc"), read("chute__spmc")),
+        (str!("chute::mpmc"), read("chute__mpmc")),
+        (str!("crossbeam::\nunbounded"), read("crossbeam__unbounded")),
+        (str!("flume::\nunbounded"), read("flume__unbounded")),
     ];
     
     chart(&all, str!("spsc"), "out/spsc");    
@@ -94,12 +87,10 @@ pub fn chart(
             .label(
                 Label::new()
                 .show(true)
-                .position(LabelPosition::Right)
+                .position(LabelPosition::InsideRight)
                 .formatter(Formatter::Function(
                     (
-                        "function (param) { return param.data.toFixed(2) + \"".to_string()
-                        //+ &unit
-                        + "\"; }"
+                        "function (param) { return param.data.toFixed(2); }"
                     ).into()
                 ))
             );
@@ -112,7 +103,8 @@ pub fn chart(
         chart = chart.series(Series::Bar(bar));
     }
     
-    let mut renderer = ImageRenderer::new(CHART_WIDTH, 180).theme(CHART_THEME);
+    let height = all_estimates.len() as u32 * 30 + 100;
+    let mut renderer = ImageRenderer::new(CHART_WIDTH, height).theme(CHART_THEME);
     renderer.save(&chart, fname.as_ref().with_extension("svg")).unwrap();
     renderer.save_format(charming::ImageFormat::Png, &chart, fname.as_ref().with_extension("png")).unwrap();    
 }
