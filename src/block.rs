@@ -10,59 +10,6 @@ use branch_hints::unlikely;
 
 pub(crate) const BLOCK_SIZE: usize = if cfg!(miri) { 128 } else { 4096 };
 
-#[derive(Default, Clone, Debug, Eq, PartialEq)]
-pub(crate) struct Packed {
-    /// `len` occupied by data + currently written data.
-    pub(crate) occupied_len: u32,
-    pub(crate) writers     : u32
-}
-impl From<Packed> for u64 {
-    #[inline]
-    fn from(value: Packed) -> Self {
-        value.occupied_len as u64
-        + ((value.writers as u64) << 32) 
-    }
-}
-impl From<u64> for Packed {
-    #[inline]
-    fn from(value: u64) -> Self {
-        Self{
-            occupied_len: value as u32,
-            writers: (value >> 32) as u32,
-        }
-    }
-}
-
-#[test]
-fn test_pack(){
-    let pack = Packed{ occupied_len: 12, writers: 600 };
-    let packed: u64 = pack.clone().into();
-    let unpacked: Packed = packed.into();
-    assert_eq!(pack, unpacked);
-}
-
-#[test]
-fn test_pack_add(){
-    let pack: u64 = Packed{ occupied_len: 12, writers: 600 }.into();
-    let add : u64 = Packed{ occupied_len: 1, writers: 1 }.into();
-    let res : u64 = pack + add;
-    
-    let Packed{occupied_len, writers} = res.into();
-    assert_eq!(occupied_len, 13);
-    assert_eq!(writers, 601);
-}
-
-#[test]
-fn test_pack_sub(){
-    let pack: u64 = Packed{ occupied_len: 1, writers: 1 }.into();
-    let sub : u64 = Packed{ occupied_len: 0, writers: 1 }.into();
-    let res : u64 = pack - sub;
-    
-    let Packed{occupied_len, writers} = res.into();
-    assert_eq!(occupied_len, 1);
-    assert_eq!(writers, 0);
-}
-
 #[derive(Default)]
 #[repr(align(64))]
 pub(crate) struct CacheLineAlign<T>(T);
@@ -77,17 +24,23 @@ impl<T> Deref for CacheLineAlign<T>{
 
 //#[repr(C)]
 pub(crate) struct Block<T> {
+    /// # spmc 
+    /// 
     /// `len` is synchronization point for `mem`.
     /// After we write to `mem`, we store `len` with "Release".
     /// Before we read from `mem`, we load `len` with "Acquire".
     /// In analogy with spin-lock synchronization.
+    /// 
+    /// # mpmc
+    /// 
+    /// It's len for writers. Readers use `bit_blocks` for getting
+    /// actual block len.
     // Aligning with cache-line size gives us +10% perf.
     pub len : CacheLineAlign<AtomicUsize>,
-    packed  : AtomicU64,
     use_count : AtomicUsize,           // When decreases to 0 - frees itself
     pub next  : AtomicPtr<Self>,
     
-    pub hi_bitblock: AtomicU64,
+    // This is not used in spmc.
     pub bit_blocks: [AtomicU64; BLOCK_SIZE/64],
     /*pub*/ mem : UnsafeCell<[MaybeUninit<T>; BLOCK_SIZE]>,
 }
@@ -103,11 +56,9 @@ impl<T> Block<T>{
             }
 
             (*ptr).len = Default::default();
-            (*ptr).packed = Default::default();
             (*ptr).use_count = AtomicUsize::new(counter);
             (*ptr).next = AtomicPtr::new(null_mut());
             
-            (*ptr).hi_bitblock = AtomicU64::new(0);
             (*ptr).bit_blocks = core::array::from_fn(|_|AtomicU64::new(0)); 
         
             BlockArc::from_raw(NonNull::new_unchecked(ptr))
@@ -163,11 +114,7 @@ impl<T> Block<T>{
         self.mem.get().cast()
     }
     
-    #[inline]
-    pub fn load_packed(&self, ordering: Ordering) -> Packed {
-        self.packed.load(ordering).into()
-    }
-    
+    // TODO: remove ordering param.
     #[must_use]
     #[inline]
     pub fn try_load_next(&self, ordering: Ordering) -> Option<BlockArc<T>> {
@@ -185,74 +132,20 @@ impl<T> Block<T>{
     
     #[inline]
     pub fn try_push(&self, value: T) -> Result<(), T> {
-        // Just Acquire?
-        let Packed{ occupied_len, .. } = self.packed.fetch_add(
-            Packed{ occupied_len: 1, writers: 1 }.into(),
-            Ordering::AcqRel
-        ).into();
-        let occupied_len = occupied_len as usize;
-        
-        if unlikely(occupied_len >= BLOCK_SIZE) {
-            // put counters back.
-            {
-                // Just Release?
-                let Packed{ occupied_len, writers } = self.packed.fetch_sub(
-                    Packed{ occupied_len: 1, writers: 1 }.into(),
-                    Ordering::AcqRel
-                ).into();
-                
-                if unlikely(writers == 1) {
-                    debug_assert_eq!(occupied_len - 1, BLOCK_SIZE as _ );
-                    self.len.store(BLOCK_SIZE, Ordering::Release);
-                }             
-            }          
-            
-            return Err(value);
-        }
-
-        unsafe{
-            let mem = self.mem().cast_mut();
-            let index = occupied_len;
-            mem.add(index).write(value);
-        }
-        
-        // Just Release?
-        let Packed{ occupied_len, writers } = self.packed.fetch_sub(
-            Packed{ occupied_len: 0, writers: 1 }.into(),
-            Ordering::AcqRel
-        ).into();
-        
-        if writers == 1 {
-            self.len.fetch_max(occupied_len as usize, Ordering::Release);
-        } else {
-            // TODO: self.len.fetch_add(0, Ordering::Release)
-            //       for mem changes visibility?
-            //self.len.fetch_add(0, Ordering::Release);
-        }
-        
-        Ok(())
-    }
-    
-    #[inline]
-    pub fn try_push2(&self, value: T) -> Result<(), T> {
-        // TODO: use len for this
-        let Packed{ occupied_len, .. } = self.packed.fetch_add(
-            Packed{ occupied_len: 1, writers: 0 }.into(),
-            Ordering::AcqRel
-        ).into();
-        let occupied_len = occupied_len as usize;
+        let occupied_len = self.len.fetch_add(1, Ordering::AcqRel);
         
         if unlikely(occupied_len >= BLOCK_SIZE) {
             return Err(value);
         }
 
+        // Actually save value.
         let index = occupied_len;
         unsafe{
             let mem = self.mem().cast_mut();
             mem.add(index).write(value);
         }
 
-        // Update bitblock
+        // Update bitblock, indicating that value is ready to read.
         {
             let bit_block_index = index / 64;
             let bit_index = index % 64;

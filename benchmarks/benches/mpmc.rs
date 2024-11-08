@@ -1,6 +1,6 @@
 //! Multiple-producers, multiple-consumers
 
-use chute::LendingIterator;
+use chute::LendingReader;
 use arrayvec::ArrayVec;
 use criterion::{criterion_group, criterion_main, Criterion, Throughput};
 use std::sync::Arc;

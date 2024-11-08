@@ -36,6 +36,10 @@ And since queue **CAN NOT** in any way dispose blocks in the middle of the list,
 
 ### Writing
 
+There are several algorithms developed as chute evolved. You may just skip for the last one.
+
+#### Write counters (v0.1.x)
+
 Simplified version of pushing value from mpmc writer: 
 
 ```rust
@@ -85,3 +89,53 @@ BEFORE len can be still in progress of writing. So we need separate len, and wri
 
 There is a case when writers keep constantly writing, and it could look like that writer counter NEVER reach 0. But! Since we have per-block counter - as soon as writers travel to the next one - counter WILL drop to 0.
 So we just use reasonably (like 4096) sized blocks - if writers write constantly - it will be depleted and changed fast.
+
+#### Atomic bitblocks (>=v0.2.0)
+
+This algorithm solves a "never reaching 0" problem of a previous one. And it is faster as well. 
+
+Each Block now have `bit_blocks` array of `AtomicU64`:
+```rust
+struct Block {
+    ..
+    len: AtomicUsize,
+    bit_blocks: [AtomicU64; BLOCK_SIZE/64]
+}
+```
+```rust
+// Get index.
+let occupied_len = self.len.fetch_add(1, Ordering::AcqRel);
+
+if unlikely(occupied_len >= BLOCK_SIZE) {
+    return Err(value);
+}
+
+// Actually save value.
+let index = occupied_len;
+unsafe{
+    let mem = self.mem().cast_mut();
+    mem.add(index).write(value);
+}
+
+// Update bitblock, indicating that value is ready to read.
+{
+    let bit_block_index = index / 64;
+    let bit_index = index % 64;
+    
+    let bitmask = 1 << bit_index;
+    let atomic_block = unsafe{ self.bit_blocks.get_unchecked(bit_block_index) };
+    atomic_block.fetch_or(bitmask, Ordering::Release);
+}
+```
+Now on the reader side we iterate over `bit_blocks` and get `trailing_ones()` from each
+bitblock, to form a len:
+```rust
+let bit_block = self.block.bit_blocks[self.bitblock_index].load(Ordering::Acquire);
+let new_len = self.bitblock_index*64 + bit_block.trailing_ones() as usize;
+```
+We need to move to the next bit-block once every 64 read messages, so this is virtually
+unnoticable from performance perspective.
+
+On result - we have 30% better overall performance, while getting our 
+messages ASAP and still keeping each writer's order. At a price of insignificant 
+memory overhead of a 1 bit per message.
