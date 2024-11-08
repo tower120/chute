@@ -2,7 +2,7 @@
 //! 
 //! Example from readme
 
-use chute::{LendingIterator};
+use chute::LendingReader;
 
 fn main() {
     const WRITERS         : usize = 4;
