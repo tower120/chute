@@ -17,11 +17,12 @@ jobs:
       uses: actions/checkout@v4
       
     - name: Generate code coverage
-      run: |
+      run:
+        RUSTFLAGS="-Copt-level=0"
         cargo tarpaulin --all-features --out xml
 
     - name: Upload to codecov.io
-      uses: codecov/codecov-action@v2
+      uses: codecov/codecov-action@v4
       with:
         token: ${{secrets.CODECOV_TOKEN}}
         fail_ci_if_error: true    
