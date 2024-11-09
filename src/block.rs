@@ -11,9 +11,14 @@ use branch_hints::unlikely;
 pub(crate) const BLOCK_SIZE    : usize = if cfg!(miri) { 128 } else { 4096 };
 pub(crate) const BITBLOCKS_LEN : usize = BLOCK_SIZE/64;
 
-#[derive(Default)]
 #[repr(align(64))]
 pub(crate) struct CacheLineAlign<T>(T);
+impl<T: Default> Default for CacheLineAlign<T> {
+    #[inline]
+    fn default() -> Self {
+        Self::new(T::default())
+    }
+}
 impl<T> CacheLineAlign<T>{
     #[inline]
     pub fn new(value: T) -> Self {
