@@ -1,2 +1,2 @@
 [default]
-exclude-files = ["benhces/*", "benchmarks/*"]
+exclude-files = ["benches/*", "benchmarks/*"]
