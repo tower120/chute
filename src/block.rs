@@ -8,11 +8,18 @@ use std::ptr::{null_mut, NonNull};
 use std::sync::atomic::{AtomicPtr, AtomicU64, AtomicUsize, Ordering};
 use branch_hints::unlikely;
 
-pub(crate) const BLOCK_SIZE: usize = if cfg!(miri) { 128 } else { 4096 };
+pub(crate) const BLOCK_SIZE    : usize = if cfg!(miri) { 128 } else { 4096 };
+pub(crate) const BITBLOCKS_LEN : usize = BLOCK_SIZE/64;
 
 #[derive(Default)]
 #[repr(align(64))]
 pub(crate) struct CacheLineAlign<T>(T);
+impl<T> CacheLineAlign<T>{
+    #[inline]
+    pub fn new(value: T) -> Self {
+        CacheLineAlign(value)
+    }
+}
 impl<T> Deref for CacheLineAlign<T>{
     type Target = T;
     
@@ -41,7 +48,7 @@ pub(crate) struct Block<T> {
     pub next  : AtomicPtr<Self>,
     
     // This is not used in spmc.
-    pub bit_blocks: [AtomicU64; BLOCK_SIZE/64],
+    pub bit_blocks: [AtomicU64; BITBLOCKS_LEN],
     /*pub*/ mem : UnsafeCell<[MaybeUninit<T>; BLOCK_SIZE]>,
 }
 

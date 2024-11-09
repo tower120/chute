@@ -7,7 +7,7 @@ use std::ptr::{null_mut, NonNull};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicPtr, Ordering};
 use branch_hints::unlikely;
-use crate::block::{Block, BlockArc, BLOCK_SIZE};
+use crate::block::{Block, BlockArc, BITBLOCKS_LEN, BLOCK_SIZE};
 use crate::LendingReader;
 
 pub struct Queue<T> {
@@ -315,31 +315,37 @@ impl<T> LendingReader for Reader<T> {
             if unlikely(self.len == BLOCK_SIZE) {
                 // fetch next block, release current
                 if let Some(next_block) = self.block.try_load_next(Ordering::Acquire) {
-
-                    self.index = 0;
-
-                    // 10-15% preformance gain with this on seq read.
-                    // Optimization for occasional readers - that traverse
-                    // several blocks at once, once in a while.
-                    //
-                    // Relaxed - because not catching this case is safe. 
-                    if !next_block.next.load(Ordering::Relaxed).is_null() {
-                        self.block = next_block;
-                        self.len = BLOCK_SIZE;
-                        self.bitblock_index = 64;
-                    } else {
+                    // Try fast-forward in Relaxed ordering.
+                    // 5% faster for benchmarks::seq case.
+                    let mut bitblock_index = 0;
+                    loop {
                         let bit_block = unsafe {
-                            next_block.bit_blocks.get_unchecked(0)
-                        }.load(Ordering::Acquire);
-    
-                        self.block = next_block;
-                        self.len   = bit_block.trailing_ones() as usize;
-                        self.bitblock_index = if bit_block == u64::MAX {1} else {0};
+                            next_block.bit_blocks.get_unchecked(bitblock_index)
+                        }.load(Ordering::Relaxed);
                         
-                        // TODO: Disallow empty blocks?
-                        if self.len == 0 {
-                            return None;
+                        if bit_block != u64::MAX{
+                            break;
                         }
+                        if bitblock_index == BITBLOCKS_LEN - 1 {
+                            break;
+                        }
+                        bitblock_index += 1;
+                    }
+                    
+                    // (Re)Read last block in Acquire ordering.
+                    let bit_block = unsafe {
+                        next_block.bit_blocks.get_unchecked(bitblock_index)
+                    }.load(Ordering::Acquire);
+
+                    // Update self.
+                    self.block = next_block;
+                    self.index = 0;
+                    self.len   = bitblock_index*64 + bit_block.trailing_ones() as usize; 
+                    self.bitblock_index = bitblock_index + (bit_block == u64::MAX) as usize;
+                    
+                    // TODO: Disallow empty blocks?
+                    if self.len == 0 {
+                        return None;
                     }
                 } else {
                     return None;
@@ -455,8 +461,8 @@ mod test_mpmc{
     #[test]
     fn fuzzy_mpmc(){
         const MAX_THREADS: usize = 16;
-        const RANGE: usize = BLOCK_SIZE * 10;
-        const REPEATS: usize = 100;
+        const RANGE: usize = BLOCK_SIZE * 40;
+        const REPEATS: usize = if cfg!(miri) { 100 } else { 2000 };
         
         let mut rng = rand::rngs::StdRng::seed_from_u64(0xe15bb9db3dee3a0f);
         for _ in 0..REPEATS {
@@ -465,10 +471,5 @@ mod test_mpmc{
             let len = rng.gen_range(0..RANGE) / wt * wt;
             test_mpmc_mt(wt, rt, len);
         }
-    }
-
-    #[test]
-    fn test_mpmc_mt_1() {
-        test_mpmc_mt(2, 1, 4000);
     }
 }
