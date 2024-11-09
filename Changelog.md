@@ -19,6 +19,7 @@ See [how it works](doc/how_it_works.md#atomic-bitblocks-v020).
 # Added
 
 - Readers now `Clone`able.
+- MIRI-friendly fuzzy testing. 
 
 ## 0.1.1
 
