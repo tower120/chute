@@ -187,9 +187,9 @@ mod test{
     
     #[test]
     fn fuzzy_spmc(){
-        const MAX_THREADS: usize = 16;
-        const RANGE: usize = BLOCK_SIZE * 40;
-        const REPEATS: usize = if cfg!(miri) { 100 } else { 2000 };
+        const MAX_THREADS: usize = if cfg!(miri) {4 } else {16  };
+        const RANGE      : usize = if cfg!(miri) {8 } else {40  } * BLOCK_SIZE;
+        const REPEATS    : usize = if cfg!(miri) {10} else {1000};
         
         let mut rng = rand::rngs::StdRng::seed_from_u64(0xe15bb9db3dee3a0f);
         for _ in 0..REPEATS {

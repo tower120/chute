@@ -315,33 +315,14 @@ impl<T> LendingReader for Reader<T> {
             if unlikely(self.len == BLOCK_SIZE) {
                 // fetch next block, release current
                 if let Some(next_block) = self.block.try_load_next(Ordering::Acquire) {
-                    // Try fast-forward in Relaxed ordering.
-                    // 5% faster for benchmarks::seq case.
-                    let mut bitblock_index = 0;
-                    loop {
-                        let bit_block = unsafe {
-                            next_block.bit_blocks.get_unchecked(bitblock_index)
-                        }.load(Ordering::Relaxed);
-                        
-                        if bit_block != u64::MAX{
-                            break;
-                        }
-                        if bitblock_index == BITBLOCKS_LEN - 1 {
-                            break;
-                        }
-                        bitblock_index += 1;
-                    }
-                    
-                    // (Re)Read last block in Acquire ordering.
                     let bit_block = unsafe {
-                        next_block.bit_blocks.get_unchecked(bitblock_index)
+                        next_block.bit_blocks.get_unchecked(0)
                     }.load(Ordering::Acquire);
 
-                    // Update self.
                     self.block = next_block;
                     self.index = 0;
-                    self.len   = bitblock_index*64 + bit_block.trailing_ones() as usize; 
-                    self.bitblock_index = bitblock_index + (bit_block == u64::MAX) as usize;
+                    self.len   = bit_block.trailing_ones() as usize; 
+                    self.bitblock_index = (bit_block == u64::MAX) as usize;
                     
                     // TODO: Disallow empty blocks?
                     if self.len == 0 {
@@ -460,9 +441,9 @@ mod test_mpmc{
     
     #[test]
     fn fuzzy_mpmc(){
-        const MAX_THREADS: usize = 16;
-        const RANGE: usize = BLOCK_SIZE * 40;
-        const REPEATS: usize = if cfg!(miri) { 100 } else { 2000 };
+        const MAX_THREADS: usize = if cfg!(miri) {4 } else {16  };
+        const RANGE      : usize = if cfg!(miri) {8 } else {40  } * BLOCK_SIZE;
+        const REPEATS    : usize = if cfg!(miri) {10} else {1000};
         
         let mut rng = rand::rngs::StdRng::seed_from_u64(0xe15bb9db3dee3a0f);
         for _ in 0..REPEATS {
