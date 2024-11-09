@@ -7,7 +7,7 @@ use std::ptr::{null_mut, NonNull};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicPtr, Ordering};
 use branch_hints::unlikely;
-use crate::block::{Block, BlockArc, BITBLOCKS_LEN, BLOCK_SIZE};
+use crate::block::{Block, BlockArc, BLOCK_SIZE};
 use crate::LendingReader;
 
 pub struct Queue<T> {
@@ -426,7 +426,6 @@ mod test_mpmc{
         for t in 0..wt {
             let messages = len/wt;
             let mut writer = queue.writer();
-            let mut queue = queue.clone();
             joins.push(std::thread::spawn(move || {
                 for i in t*messages..(t+1)*messages {
                     writer.push(i);
