@@ -18,10 +18,10 @@ jobs:
       
     - name: Generate code coverage
       run: |
-        cargo tarpaulin --verbose --all-features --out xml
+        cargo tarpaulin --all-features --out xml
 
     - name: Upload to codecov.io
       uses: codecov/codecov-action@v2
       with:
-        # token: ${{secrets.CODECOV_TOKEN}} # not required for public repos
+        token: ${{secrets.CODECOV_TOKEN}}
         fail_ci_if_error: true    
