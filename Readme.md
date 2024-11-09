@@ -4,6 +4,7 @@
 [![license](https://img.shields.io/badge/license-Apache--2.0_OR_MIT-blue?style=flat-square)](#license)
 [![Docs](https://docs.rs/hi_sparse_bitset/badge.svg)](https://docs.rs/chute)
 [![CI](https://github.com/tower120/chute/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/tower120/chute/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/github/tower120/chute/graph/badge.svg?token=XIOWAD7COM)](https://codecov.io/github/tower120/chute)
 
 ![Queue illustration](doc/img/mpmc_white.png)
 
@@ -97,6 +98,10 @@ Chute is the next iteration of [rc_event_queue](https://crates.io/crates/rc_even
 mpmc writers. 
 
 [See how it works.](doc/how_it_works.md)
+
+## Test coverage
+
+Library covered with fuzzy and [miri](https://github.com/rust-lang/miri) tests.
 
 ## Known limitations
 
