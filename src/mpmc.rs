@@ -466,8 +466,8 @@ mod test_mpmc{
         
         let mut rng = rand::rngs::StdRng::seed_from_u64(0xe15bb9db3dee3a0f);
         for _ in 0..REPEATS {
-            let wt = rng.gen_range(1..=MAX_THREADS);
-            let rt = rng.gen_range(1..=MAX_THREADS);
+            let wt  = rng.gen_range(1..=MAX_THREADS);
+            let rt  = rng.gen_range(1..=MAX_THREADS);
             let len = rng.gen_range(0..RANGE) / wt * wt;
             test_mpmc_mt(wt, rt, len);
         }
