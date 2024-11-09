@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Install cargo-tarpaulin
-    - uses: taiki-e/install-action@v2
+      uses: taiki-e/install-action@v2
       with:
         tool: cargo-tarpaulin
         
