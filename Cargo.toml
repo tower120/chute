@@ -21,6 +21,7 @@ arrayvec = "0.7"
 
 [profile.test]
 opt-level = 0 
+lto = "off"
 
 [[bench]]
 name = "mp_vs_sp_write"
