@@ -1,9 +1,10 @@
-//! Multi-producer multi-consumer lock-free multicast[^multicast] queue. 
+//! Multi-producer multi-consumer lock-free multicast queue[^multicast]. 
 //! 
-//! [^multicast]: Each consumer gets every message sent to queue, from the moment of subscription.
+//! [^multicast]: Or broadcast queue. Each consumer gets every message sent 
+//! to queue, from the moment of subscription.
 //!
-//! Memory-wise all consumers works with the same shared data blocks, so there 
-//! is no duplication.
+//! Memory-wise all consumers work with the same shared data blocks, so there 
+//! is no duplication. Queue is unbounded - it grows and shrinks dynamically as needed.
 //!
 //! Read performance is **stellar** - there is only one atomic read per block.
 //! Most of the time - this is just plain continuous data reading.

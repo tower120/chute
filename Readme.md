@@ -8,13 +8,13 @@
 
 ![Queue illustration](doc/img/mpmc_white.png)
 
-An mpmc[^mpmc]/spmc[^spmc] lock-free multicast[^broadcast] queue.
+An mpmc[^mpmc]/spmc[^spmc] lock-free broadcast[^broadcast] queue.
 
 [^mpmc]: Multi-producer multi-consumer.
 
 [^spmc]: Single-producer multi-consumer.
 
-[^broadcast]: Also known as a broadcast queue. Each consumer gets 
+[^broadcast]: Also known as a multicast queue. Each consumer gets 
 every message sent to queue, from the moment of subscription.
 
 * Lock-free consumers without overhead[^lockfree_overhead].

@@ -5,9 +5,9 @@ license = "MIT OR Apache-2.0"
 edition = "2021"
 exclude = ["benchmarks", "doc"]
 repository  = "https://github.com/tower120/chute"
-description = "Lockfree mpmc/spmc multicast queue."
+description = "Lockfree mpmc/spmc broadcast queue."
 categories = ["concurrency", "data-structures"]
-keywords   = ["lockfree", "mpmc", "spmc", "multicast", "queue"]
+keywords   = ["lockfree", "mpmc", "spmc", "broadcast", "queue"]
 
 [dependencies]
 branch_hints = "0.4"
