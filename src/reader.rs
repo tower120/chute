@@ -5,7 +5,7 @@
 /// with message BEFORE consuming the next one. 
 /// Because of this, it does not implement [Iterator]. But [ClonedReader] does.
 /// 
-/// We expect it to be mainly used with reader in this way: 
+/// We expect it to be mainly used in this way: 
 /// ```
 /// # let queue: chute::spmc::Queue<usize> = Default::default();
 /// # let mut reader = queue.reader();

@@ -14,9 +14,9 @@
 //! 
 //! In general, using `Arc<spin::Mutex<spmc::Queue<T>>>` is more performant
 //! than `Arc<mpmc::Queue<T>>` from writer perspective.
-//! But! Writing simultaneously from several threads is faster with [mpmc].
-//! 
-//! Read performance identical.
+//! But! Writing simultaneously from several threads is much faster with [mpmc].
+//!
+//! The read performance is almost equal, with a slight advantage for [spmc]. 
 //! 
 //! # Order
 //! 
