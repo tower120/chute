@@ -5,27 +5,26 @@ use str_macro::str;
 use crate::{read_group};
 use crate::multi_chart::{multi_chart, MultiChartData, Visual};
 
-pub fn mpmc(dir_name: impl AsRef<Path>) {
-    let rt  = 4; 
-    let wts = [1,2,4,8];
+pub fn spmc(dir_name: impl AsRef<Path>) {
+    let rts = [1,2,4,8];
     let read = |dir: &str| -> BTreeMap<usize, f64> {
         let data = read_group(
             &std::path::Path::new(dir_name.as_ref()).join(dir)
-            ,&wts, &[rt]
+            ,&[1], &rts
         );
-        data.iter().map(|(&wt, readers)| (wt, readers[&rt])).collect()
+        data[&1].clone()
     };
 
     let all: MultiChartData = vec![
-        (str!("chute::spmc\nw/ mutex"), read("chute__spmc_mutex")),
+        (str!("chute::spmc"), read("chute__spmc")),
         (str!("chute::mpmc"), read("chute__mpmc")),
         (str!("tokio::\nbroadcast"), read("tokio__broadcast")),
     ];
     
     let visual = Visual{
-        title: format!("broadcast mpmc ({rt} readers)"),
-        sub_chart_name: str!("writers"),
+        title: str!("broadcast spmc"),
+        sub_chart_name: str!("readers"),
         label_pos: LabelPosition::Right,
     };
-    multi_chart(&all, "out/mpmc", visual);  
+    multi_chart(&all, "out/spmc", visual);    
 }

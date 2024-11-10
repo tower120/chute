@@ -1,4 +1,4 @@
-//! Multiple-producers, multiple-consumers
+//! Multicast multiple-producers, multiple-consumers
 
 use chute::LendingReader;
 use arrayvec::ArrayVec;

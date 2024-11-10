@@ -20,11 +20,7 @@ charming = { git = "https://github.com/yuankunzhang/charming.git", rev = "aa18c2
 #charming = { version = "0.4", features = ["ssr"] }
 
 [[bench]]
-name = "mpmc"
-harness = false
-
-[[bench]]
-name = "mpsc"
+name = "seq"
 harness = false
 
 [[bench]]
@@ -32,5 +28,15 @@ name = "spsc"
 harness = false
 
 [[bench]]
-name = "seq"
+name = "mpsc"
+harness = false
+
+# MULTICAST
+
+[[bench]]
+name = "mpmc"
+harness = false
+
+[[bench]]
+name = "spmc"
 harness = false

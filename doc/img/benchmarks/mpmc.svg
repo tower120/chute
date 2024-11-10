@@ -35,23 +35,23 @@
 <path d="M100 144.5l36.5 0l0 14.1l-36.5 0Z" fill="#91cc75" ecmeta_series_index="1" ecmeta_data_index="1" ecmeta_ssr_type="chart" class="zr0-cls-2"></path>
 <path d="M100 64.5l173.1 0l0 14.1l-173.1 0Z" fill="#91cc75" ecmeta_series_index="1" ecmeta_data_index="2" ecmeta_ssr_type="chart" class="zr0-cls-2"></path>
 <path d="M100 241.4l66 0l0 14.1l-66 0Z" fill="#fac858" ecmeta_series_index="2" ecmeta_data_index="0" ecmeta_ssr_type="chart" class="zr0-cls-3"></path>
-<path d="M100 161.4l35.8 0l0 14.1l-35.8 0Z" fill="#fac858" ecmeta_series_index="2" ecmeta_data_index="1" ecmeta_ssr_type="chart" class="zr0-cls-3"></path>
-<path d="M100 81.4l391.6 0l0 14.1l-391.6 0Z" fill="#fac858" ecmeta_series_index="2" ecmeta_data_index="2" ecmeta_ssr_type="chart" class="zr0-cls-3"></path>
+<path d="M100 161.4l35.3 0l0 14.1l-35.3 0Z" fill="#fac858" ecmeta_series_index="2" ecmeta_data_index="1" ecmeta_ssr_type="chart" class="zr0-cls-3"></path>
+<path d="M100 81.4l381.6 0l0 14.1l-381.6 0Z" fill="#fac858" ecmeta_series_index="2" ecmeta_data_index="2" ecmeta_ssr_type="chart" class="zr0-cls-3"></path>
 <path d="M100 258.3l90.8 0l0 14.1l-90.8 0Z" fill="#ee6666" ecmeta_series_index="3" ecmeta_data_index="0" ecmeta_ssr_type="chart" class="zr0-cls-4"></path>
 <path d="M100 178.3l30.1 0l0 14.1l-30.1 0Z" fill="#ee6666" ecmeta_series_index="3" ecmeta_data_index="1" ecmeta_ssr_type="chart" class="zr0-cls-4"></path>
 <path d="M100 98.3l225.9 0l0 14.1l-225.9 0Z" fill="#ee6666" ecmeta_series_index="3" ecmeta_data_index="2" ecmeta_ssr_type="chart" class="zr0-cls-4"></path>
-<text dominant-baseline="central" text-anchor="end" style="font-size:11px;font-family:monospace;font-weight:bold;" transform="translate(122.3805 214.6435)" fill="#eee" stroke="#5470c6" stroke-width="2" paint-order="stroke" stroke-miterlimit="2">5.09</text>
-<text dominant-baseline="central" text-anchor="end" style="font-size:11px;font-family:monospace;font-weight:bold;" transform="translate(133.5543 134.6435)" fill="#eee" stroke="#5470c6" stroke-width="2" paint-order="stroke" stroke-miterlimit="2">7.17</text>
-<text dominant-baseline="central" text-anchor="end" style="font-size:11px;font-family:monospace;font-weight:bold;" transform="translate(250.1652 54.6435)" fill="#eee" stroke="#5470c6" stroke-width="2" paint-order="stroke" stroke-miterlimit="2">28.87</text>
-<text dominant-baseline="central" text-anchor="end" style="font-size:11px;font-family:monospace;font-weight:bold;" transform="translate(146.3146 231.5478)" fill="#333">9.55</text>
-<text dominant-baseline="central" text-anchor="end" style="font-size:11px;font-family:monospace;font-weight:bold;" transform="translate(131.5387 151.5478)" fill="#333">6.80</text>
-<text dominant-baseline="central" text-anchor="end" style="font-size:11px;font-family:monospace;font-weight:bold;" transform="translate(268.1351 71.5478)" fill="#333">32.21</text>
-<text dominant-baseline="central" text-anchor="end" style="font-size:11px;font-family:monospace;font-weight:bold;" transform="translate(160.9898 248.4522)" fill="#333">12.28</text>
-<text dominant-baseline="central" text-anchor="end" style="font-size:11px;font-family:monospace;font-weight:bold;" transform="translate(130.7917 168.4522)" fill="#333">6.66</text>
-<text dominant-baseline="central" text-anchor="end" style="font-size:11px;font-family:monospace;font-weight:bold;" transform="translate(486.5569 88.4522)" fill="#333">72.85</text>
-<text dominant-baseline="central" text-anchor="end" style="font-size:11px;font-family:monospace;font-weight:bold;" transform="translate(185.7968 265.3565)" fill="#333">16.89</text>
-<text dominant-baseline="central" text-anchor="end" style="font-size:11px;font-family:monospace;font-weight:bold;" transform="translate(125.0708 185.3565)" fill="#333">5.59</text>
-<text dominant-baseline="central" text-anchor="end" style="font-size:11px;font-family:monospace;font-weight:bold;" transform="translate(320.9264 105.3565)" fill="#333">42.03</text>
+<text dominant-baseline="central" text-anchor="start" style="font-size:11px;font-family:monospace;font-weight:bold;" transform="translate(132.3805 214.6435)" fill="#333" stroke="rgb(255,255,255)" stroke-width="2" paint-order="stroke" stroke-miterlimit="2">5.09</text>
+<text dominant-baseline="central" text-anchor="start" style="font-size:11px;font-family:monospace;font-weight:bold;" transform="translate(143.5543 134.6435)" fill="#333" stroke="rgb(255,255,255)" stroke-width="2" paint-order="stroke" stroke-miterlimit="2">7.17</text>
+<text dominant-baseline="central" text-anchor="start" style="font-size:11px;font-family:monospace;font-weight:bold;" transform="translate(260.1652 54.6435)" fill="#333" stroke="rgb(255,255,255)" stroke-width="2" paint-order="stroke" stroke-miterlimit="2">28.87</text>
+<text dominant-baseline="central" text-anchor="start" style="font-size:11px;font-family:monospace;font-weight:bold;" transform="translate(156.3146 231.5478)" fill="#333" stroke="rgb(255,255,255)" stroke-width="2" paint-order="stroke" stroke-miterlimit="2">9.55</text>
+<text dominant-baseline="central" text-anchor="start" style="font-size:11px;font-family:monospace;font-weight:bold;" transform="translate(141.5387 151.5478)" fill="#333" stroke="rgb(255,255,255)" stroke-width="2" paint-order="stroke" stroke-miterlimit="2">6.80</text>
+<text dominant-baseline="central" text-anchor="start" style="font-size:11px;font-family:monospace;font-weight:bold;" transform="translate(278.1351 71.5478)" fill="#333" stroke="rgb(255,255,255)" stroke-width="2" paint-order="stroke" stroke-miterlimit="2">32.21</text>
+<text dominant-baseline="central" text-anchor="start" style="font-size:11px;font-family:monospace;font-weight:bold;" transform="translate(170.9898 248.4522)" fill="#333" stroke="rgb(255,255,255)" stroke-width="2" paint-order="stroke" stroke-miterlimit="2">12.28</text>
+<text dominant-baseline="central" text-anchor="start" style="font-size:11px;font-family:monospace;font-weight:bold;" transform="translate(140.2988 168.4522)" fill="#333" stroke="rgb(255,255,255)" stroke-width="2" paint-order="stroke" stroke-miterlimit="2">6.57</text>
+<text dominant-baseline="central" text-anchor="start" style="font-size:11px;font-family:monospace;font-weight:bold;" transform="translate(486.6261 88.4522)" fill="#333" stroke="rgb(255,255,255)" stroke-width="2" paint-order="stroke" stroke-miterlimit="2">71.00</text>
+<text dominant-baseline="central" text-anchor="start" style="font-size:11px;font-family:monospace;font-weight:bold;" transform="translate(195.7968 265.3565)" fill="#333" stroke="rgb(255,255,255)" stroke-width="2" paint-order="stroke" stroke-miterlimit="2">16.89</text>
+<text dominant-baseline="central" text-anchor="start" style="font-size:11px;font-family:monospace;font-weight:bold;" transform="translate(135.0708 185.3565)" fill="#333" stroke="rgb(255,255,255)" stroke-width="2" paint-order="stroke" stroke-miterlimit="2">5.59</text>
+<text dominant-baseline="central" text-anchor="start" style="font-size:11px;font-family:monospace;font-weight:bold;" transform="translate(330.9264 105.3565)" fill="#333" stroke="rgb(255,255,255)" stroke-width="2" paint-order="stroke" stroke-miterlimit="2">42.03</text>
 <path d="M-5 -5l341.4 0l0 24l-341.4 0Z" transform="translate(119.28 321)" fill="rgb(0,0,0)" fill-opacity="0" stroke="#ccc" stroke-width="0" class="zr0-cls-0"></path>
 <path d="M3.5 0L21.5 0A3.5 3.5 0 0 1 25 3.5L25 10.5A3.5 3.5 0 0 1 21.5 14L3.5 14A3.5 3.5 0 0 1 0 10.5L0 3.5A3.5 3.5 0 0 1 3.5 0" transform="translate(119.28 321)" fill="#5470c6" ecmeta_series_index="0" ecmeta_data_index="0" ecmeta_ssr_type="legend" ecmeta_silent="true" class="zr0-cls-0"></path>
 <text dominant-baseline="central" text-anchor="start" style="font-size:12px;font-family:sans-serif;" xml:space="preserve" x="30" y="7" transform="translate(119.28 321)" fill="#333">1 writers</text>
@@ -65,8 +65,8 @@
 <path d="M3.5 0L21.5 0A3.5 3.5 0 0 1 25 3.5L25 10.5A3.5 3.5 0 0 1 21.5 14L3.5 14A3.5 3.5 0 0 1 0 10.5L0 3.5A3.5 3.5 0 0 1 3.5 0" transform="translate(375.36 321)" fill="#ee6666" ecmeta_series_index="3" ecmeta_data_index="3" ecmeta_ssr_type="legend" ecmeta_silent="true" class="zr0-cls-0"></path>
 <text dominant-baseline="central" text-anchor="start" style="font-size:12px;font-family:sans-serif;" xml:space="preserve" x="30" y="7" transform="translate(375.36 321)" fill="#333">8 writers</text>
 <path d="M0 0l75.4 0l0 14l-75.4 0Z" transform="translate(375.36 321)" fill="transparent" ecmeta_series_index="3" ecmeta_data_index="3" ecmeta_ssr_type="legend" class="zr0-cls-5"></path>
-<path d="M-76.1 -5l152.2 0l0 28l-152.2 0Z" transform="translate(285 5)" fill="rgb(0,0,0)" fill-opacity="0" stroke="#ccc" stroke-width="0" class="zr0-cls-0"></path>
-<text dominant-baseline="central" text-anchor="middle" style="font-size:18px;font-family:sans-serif;font-weight:bold;" xml:space="preserve" y="9" transform="translate(285 5)" fill="#464646">mpmc (4 readers)</text>
+<path d="M-118.3 -5l236.6 0l0 28l-236.6 0Z" transform="translate(285 5)" fill="rgb(0,0,0)" fill-opacity="0" stroke="#ccc" stroke-width="0" class="zr0-cls-0"></path>
+<text dominant-baseline="central" text-anchor="middle" style="font-size:18px;font-family:sans-serif;font-weight:bold;" xml:space="preserve" y="9" transform="translate(285 5)" fill="#464646">broadcast mpmc (4 readers)</text>
 <style ><![CDATA[
 .zr0-cls-0:hover {
 pointer-events:none;
