@@ -1,7 +1,9 @@
+mod spmc;
 mod mpmc;
 mod mpsc;
 mod spsc;
 mod seq;
+mod multi_chart;
 
 use std::collections::{BTreeMap};
 use std::fs;
@@ -31,6 +33,7 @@ fn read_estimate(fname: &Path) -> f64 {
     point_estimate.as_f64().unwrap()
 }
 
+/// [writer_count][reader_count] -> estimate
 type EstimatesMPMC = BTreeMap<usize, BTreeMap<usize, f64>>;
 
 fn read_group(dir_name: &Path, writers: &[usize], readers: &[usize]) -> EstimatesMPMC {
@@ -54,11 +57,12 @@ const CHART_WIDTH: u32 = 570;
 
 fn main(){
     #[derive(Eq, PartialEq)]
-    enum Command{All, Mpmc, Mpsc, Spsc, Seq}
+    enum Command{All, Spmc, Mpmc, Mpsc, Spsc, Seq}
     
     let args: Vec<String> = env::args().collect();
     let command = match args.get(1).map(|s| s.as_str()) {
         None => Command::All,
+        Some("spmc") => Command::Spmc,
         Some("mpmc") => Command::Mpmc,
         Some("mpsc") => Command::Mpsc,
         Some("spsc") => Command::Spsc,
@@ -70,7 +74,10 @@ fn main(){
     let criterion_dir = current_dir.join("target/criterion");
     
     let _ = fs::create_dir(current_dir.join("out"));
-    
+
+    if command == Command::All || command == Command::Spmc {
+        spmc::spmc(criterion_dir.join("spmc"));    
+    }
     if command == Command::All || command == Command::Mpmc {
         mpmc::mpmc(criterion_dir.join("mpmc"));    
     }

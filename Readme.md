@@ -36,7 +36,7 @@ If write calls will be synchronized - all messages will be ordered by that "sync
 
 ## Example
 
-Write from multiple threads, read from multiple threads.
+Write from multiple threads, read from multiple threads:
 
 ```rust
 const WRITERS         : usize = 4;
@@ -78,6 +78,8 @@ std::thread::scope(|s| {
 });
 ```
 
+See [examples](examples).
+
 ## Benchmarks
 
 Intel i4771 (3.5Ghz 4C/8T), DDR3 1600Mhz, Windows 10. See [benchmarks](benchmarks) sub-project.
@@ -85,7 +87,8 @@ Intel i4771 (3.5Ghz 4C/8T), DDR3 1600Mhz, Windows 10. See [benchmarks](benchmark
 ![seq benchmark](doc/img/benchmarks/seq.svg)
 ![spsc benchmark](doc/img/benchmarks/spsc.svg)
 ![mpsc benchmark](doc/img/benchmarks/mpsc.svg)
-![mpmc benchmark](doc/img/benchmarks/mpmc.svg)
+![broadcast mpmc benchmark](doc/img/benchmarks/mpmc.svg)
+![broadcast spmc benchmark](doc/img/benchmarks/spmc.svg)
 
 Benchmarks compare with a channels since chute can be used +/- as a channel, by
 spinning on the reader side.
