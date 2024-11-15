@@ -1,8 +1,35 @@
 use chute::LendingReader;
 use criterion::{criterion_group, criterion_main, Criterion};
+use std::sync::Arc;
 
 mod common;
 use common::*;
+
+pub fn chute_unicast_spmc(){
+    let mut queue = chute::unicast::spmc::Queue::default();
+    let mut reader = queue.reader();
+    
+    let wt = std::thread::spawn(move || {
+        for i in 0..COUNT {
+            queue.push(message::new(i));
+        }
+    });
+
+    let rt = std::thread::spawn(move || {
+        for _ in 0..COUNT {
+            loop{
+                if let None = reader.next(){
+                    yield_fn();
+                } else {
+                    break;
+                }
+            }
+        }
+    });
+    
+    wt.join().unwrap();
+    rt.join().unwrap();
+}
 
 pub fn chute_spmc(){
     let mut queue = chute::spmc::Queue::new();
@@ -97,6 +124,7 @@ pub fn flume_unbounded(){
 
 fn criterion_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("spsc");
+    group.bench_function("chute::unicast::spmc", |b| b.iter(|| chute_unicast_spmc()));
     group.bench_function("chute::spmc", |b| b.iter(|| chute_spmc()));
     group.bench_function("chute::mpmc", |b| b.iter(|| chute_mpmc()));
     group.bench_function("crossbeam::unbounded", |b| b.iter(|| crossbeam_unbounded()));

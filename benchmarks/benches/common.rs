@@ -5,7 +5,7 @@ pub mod message {
 
     const LEN: usize = 4;
 
-    #[derive(Clone, Copy)]
+    #[derive(Default, Clone, Copy)]
     pub struct Message(#[allow(dead_code)] [usize; LEN]);
     
     impl fmt::Debug for Message {
