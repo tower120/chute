@@ -11,12 +11,12 @@ on the writer's side as well, so it is almost 30% faster!
 
 See [how it works](doc/how_it_works.md#atomic-bitblocks-v020).
 
-# Changed
+### Changed
 
 - `spmc` and `mpmc` now have separate `Reader`s.
 - `LendingItereator` replaced with non-GAT `LendingReader`.
 
-# Added
+### Added
 
 - Readers now `Clone`able.
 - MIRI-friendly fuzzy testing. 
