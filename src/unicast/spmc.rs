@@ -1,19 +1,23 @@
 //! Unbounded unicast spmc.
 
+use std::marker::PhantomData;
+use std::mem::{ManuallyDrop};
 use std::ops::{Deref, DerefMut};
+use std::{mem, ptr};
+use std::ptr::NonNull;
 use std::sync::Arc;
-use std::sync::atomic::Ordering;
-use branch_hints::{likely, unlikely};
+use std::sync::atomic::{fence, Ordering};
+use branch_hints::{unlikely};
 use super::block::{BLOCK_SIZE, Block};
 
-#[derive(Default)]
 struct QueueSharedData<T>{
-    read_block : spin::Mutex<Arc<Block<T>>>,
+    read_block: spin::Mutex<Arc<Block<T>>>,
 }
 
 pub struct Queue<T> {
     shared_data: Arc<QueueSharedData<T>>,
     write_block: Arc<Block<T>>,              // aka "last_block"
+    write_block_mem: *mut T,
 }
 
 unsafe impl<T> Send for Queue<T> {}
@@ -21,15 +25,19 @@ unsafe impl<T> Sync for Queue<T> {}
 
 impl<T: Default> Default for Queue<T> {
     fn default() -> Self {
-        let block = Arc::new(Block::default());
+        let write_block: Arc<Block<T>> = Default::default();
+        let write_block_mem = unsafe{ write_block.mem_unchecked().cast_mut() };
         Self{
-            shared_data: Arc::new(QueueSharedData { read_block: block.clone().into() }),
-            write_block: block,
+            shared_data: Arc::new(QueueSharedData { 
+                read_block : write_block.clone().into(),
+            }),
+            write_block,
+            write_block_mem
         } 
     }
 }
 
-impl<T> Queue<T> {  
+impl<T> Queue<T> {
     #[inline]
     pub fn push(&mut self, value: T) {
         let mut block = self.write_block.deref();
@@ -38,26 +46,26 @@ impl<T> Queue<T> {
             // Cold function has no effect here.
             let new_block = Arc::new(Block::default());
             *self.write_block.next.lock() = Some(new_block.clone());
+            self.write_block_mem = unsafe{ new_block.mem_unchecked().cast_mut() };
             self.write_block = new_block;
             block = self.write_block.as_ref();
             len = 0;
         }
         
-        unsafe{
-            // TODO: cache mem pointer
-            let mem = block.mem_unchecked().cast_mut();
-            mem.add(len).write(value);
-        }
-        
+        unsafe{ self.write_block_mem.add(len).write(value); }
+
+        // This is necessary for reader to see changes in block data.
         block.write_counter.store(len+1, Ordering::Release);
     }
     
     pub fn reader(&self) -> Reader<T>{
         let queue_shared_data = self.shared_data.clone(); 
         let block = queue_shared_data.read_block.lock().clone();
+        let block_mem = unsafe{ block.mem_unchecked() }; 
         Reader{
             write_counter: block.write_counter.load(Ordering::Acquire),
             block,
+            block_mem,
             queue_shared_data,
         }
     }
@@ -71,13 +79,27 @@ impl<T> Queue<T> {
 /// every read message. With ReadGuard we basically give you a reference, that 
 /// can be [take]n. 
 pub struct ReadGuard<'a, T>{
-    value: *mut T,
-    block_to_drop: Option<&'a Block<T>>
+    value: NonNull<T>,
+    block: &'a Block<T>,
+    // We own T
+    phantom_data: PhantomData<T>
 }
 impl<'a, T> ReadGuard<'a, T>{
     #[inline]
+    pub fn mark_readed(&mut self) {
+        if unlikely(self.block.read_succ.fetch_add(1, Ordering::Release) == BLOCK_SIZE-1) {
+            // See Arc::drop implementation, for this fence rationale.
+            fence(Ordering::Acquire);
+            unsafe{self.block.dealloc_destructed_mem()};
+        }
+    }
+    
+    #[inline]
     pub fn take(self) -> T {
-        unsafe{ std::ptr::read(self.value) }
+        let mut this = ManuallyDrop::new(self);
+        let value = unsafe{ this.value.read() };
+        this.mark_readed();
+        value
     }
 }
 impl<'a, T> Deref for ReadGuard<'a, T>{
@@ -85,13 +107,13 @@ impl<'a, T> Deref for ReadGuard<'a, T>{
 
     #[inline]
     fn deref(&self) -> &Self::Target {
-        unsafe{ &*self.value }
+        unsafe{ self.value.as_ref() }
     }
 }
 impl<'a, T> DerefMut for ReadGuard<'a, T>{
     #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
-        unsafe{ &mut*self.value }
+        unsafe{ self.value.as_mut() }
     }
 }
 impl<'a, T> Drop for ReadGuard<'a, T>{
@@ -99,23 +121,18 @@ impl<'a, T> Drop for ReadGuard<'a, T>{
     fn drop(&mut self) {
         // 1. Drop value
         unsafe {
-            std::ptr::drop_in_place(self.value);
+            ptr::drop_in_place(self.value.as_ptr());
         }
         
         // 2. Drop block's mem, if needed.
-        if likely(self.block_to_drop.is_none()){
-            return;
-        }
-        unsafe{ 
-            self.block_to_drop.unwrap_unchecked()
-                .dealloc_destructed_mem(); 
-        }
+        self.mark_readed();
     }
 }
 
 pub struct Reader<T> {
     write_counter: usize,
     block: Arc<Block<T>>,
+    block_mem: *const T,
     queue_shared_data: Arc<QueueSharedData<T>>,    
 }
 unsafe impl<T> Send for Reader<T> {}
@@ -123,9 +140,10 @@ unsafe impl<T> Send for Reader<T> {}
 impl<T: Default + Clone> Reader<T> {
     #[inline]
     pub fn next(&mut self) -> Option<ReadGuard<'_, T>>{
+        let mut exp = 1;
         let mut read_counter = self.block.read_counter.load(Ordering::Acquire);
         loop{
-            if read_counter == self.write_counter {
+            if read_counter >= self.write_counter {
                 if unlikely(read_counter == BLOCK_SIZE) {
                     let next_block = {
                         // It is highly unlikely that queue will stop EXACTLY at the last element of the block.
@@ -153,11 +171,12 @@ impl<T: Default + Clone> Reader<T> {
                     // just read everything again for the new block.
                     read_counter       = next_block.read_counter.load(Ordering::Acquire);
                     self.write_counter = next_block.write_counter.load(Ordering::Acquire);
+                    self.block_mem = unsafe{ next_block.mem_unchecked() }; 
                     self.block = next_block;
                     continue;
                 } else {
                     let write_counter = self.block.write_counter.load(Ordering::Acquire);
-                    if write_counter == self.write_counter {
+                    if write_counter <= read_counter {
                         return None;
                     }
                     self.write_counter = write_counter;
@@ -170,30 +189,30 @@ impl<T: Default + Clone> Reader<T> {
             match result {
                 Ok(_) => {
                     let index = read_counter;
-                    // TODO: Cache mem pointer
-                    let value = unsafe{ self.block.mem_unchecked().cast_mut().add(index) };
-                    
-                    return Some(
-                        ReadGuard{
-                            value,
-                            block_to_drop: 
-                                // Only one thread can get here, and only once per block.
-                                if unlikely(index == BLOCK_SIZE-1) { 
-                                    Some(self.block.as_ref()) 
-                                } else {
-                                    None
-                                },
-                        }
-                    );    
+                    let value = unsafe{
+                        let ptr = self.block.mem_unchecked().add(index);
+                        NonNull::new_unchecked(ptr.cast_mut())
+                    };
+                    return Some(ReadGuard{ value, block: self.block.as_ref(), phantom_data: Default::default() });
                 }
-                Err(new_read_counter) => { read_counter = new_read_counter }
+                Err(new_read_counter) => {
+                    read_counter = new_read_counter 
+                }
             };
+
+            for _ in 0..1<<exp {
+                std::hint::spin_loop();    
+            }
+            if exp<10 {
+                exp += 1;    
+            }
         }
     }
 }
 
 #[cfg(test)]
 mod test {
+    use arrayvec::ArrayVec;
     use super::*;
     use itertools::assert_equal;
     
@@ -216,52 +235,55 @@ mod test {
         assert_equal(vec, 0..COUNT);
     }
     
-    
-    pub mod message {
-        use std::fmt;
-    
-        const LEN: usize = 4;
-    
-        #[derive(Default, Clone, Copy)]
-        pub struct Message(#[allow(dead_code)] [usize; LEN]);
-        
-        impl fmt::Debug for Message {
-            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                f.pad("Message")
-            }
-        }
-        
-        #[inline]
-        pub fn new(num: usize) -> Message {
-            Message([num; LEN])
-        }    
-    }    
-    
     #[test]
     fn spsc_test(){
-        let mut queue = Queue::default();
-        let mut reader = queue.reader();
-        const COUNT: usize = BLOCK_SIZE*2 + 31;
+        let mut queue: Queue<String> = Queue::default();
+        
+        const COUNT: usize = BLOCK_SIZE *2 + 32;
+        const THREAD_LEFTOVERS: usize = 1;
+        const READ_THREADS: usize = 4;
+        
+        let mut out: Arc<spin::Mutex<Vec<String>>> = Default::default();
+        let mut joins: ArrayVec<_, 64> = Default::default();
+        for _ in 0..READ_THREADS {
+            let mut out = out.clone();
+            let mut reader = queue.reader();
+            let rt = std::thread::spawn(move || {
+                let mut vec = Vec::new();
+                for _ in 0..COUNT/READ_THREADS - THREAD_LEFTOVERS {
+                    loop{
+                        if let Some(msg) = reader.next(){
+                            vec.push(msg.take());
+                            break;
+                        } else {
+                            std::thread::yield_now();
+                        }
+                    }
+                }
+                out.lock().extend(vec);
+            });
+            joins.push(rt);
+        }
         
         let wt = std::thread::spawn(move || {
             for i in 0..COUNT {
-                queue.push(/*message::new(i)*/String::from(format!("{i}")));
-            }
-        });
-    
-        let rt = std::thread::spawn(move || {
-            for _ in 0..COUNT {
-                loop{
-                    if let None = reader.next(){
-                        std::thread::yield_now();
-                    } else {
-                        break;
-                    }
-                }
+                queue.push(String::from(format!("{i}")));
             }
         });
         
         wt.join().unwrap();
-        rt.join().unwrap();
+        for join in joins{
+            join.join().unwrap();
+        }
+
+        /* assert */ {
+            let mut out = mem::take(out.lock().deref_mut());
+            out.sort_by_key(|s|s.parse::<usize>().unwrap());
+            
+            let control = (0..COUNT - THREAD_LEFTOVERS*READ_THREADS)
+                .map(|i|String::from(format!("{i}")));
+            
+            assert_equal(out, control);
+        }
     }    
 }
