@@ -147,9 +147,13 @@ mod test{
     use crate::block::BLOCK_SIZE;
     use crate::spmc::Queue;
     use crate::LendingReader;
+    use crate::test::StringWrapper;
 
-    fn test_spmc_mt(rt: usize, len: usize) {
-        let queue: Arc<spin::Mutex<Queue<usize>>> = Default::default();
+    fn test_spmc_mt<Value>(rt: usize, len: usize)
+    where
+        Value: From<usize> + Into<usize> + Clone + 'static,
+    {
+        let queue: Arc<spin::Mutex<Queue<Value>>> = Default::default();
         
         let mut joins = Vec::new();
         
@@ -162,7 +166,7 @@ mod test{
                 let mut i = 0;
                 loop {
                     if let Some(value) = reader.next() {
-                        sum += value;
+                        sum += value.clone().into();
                         
                         i += 1;
                         if i == len {
@@ -176,7 +180,7 @@ mod test{
         
         joins.push(std::thread::spawn(move || {
             for i in 0..len{
-                queue.lock().push(i);
+                queue.lock().push(i.into());
             }
         }));
         
@@ -195,7 +199,8 @@ mod test{
         for _ in 0..REPEATS {
             let rt  = rng.gen_range(1..=MAX_THREADS);
             let len = rng.gen_range(0..RANGE);
-            test_spmc_mt(rt, len);
+            test_spmc_mt::<usize>(rt, len);
+            test_spmc_mt::<StringWrapper>(rt, len);
         }
     }    
 }

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.1
+### Fix
+- `mpmc` block destructor could go out-of-bounds for `needs_drop` objects.
+
+### Changed
+- `mpmc::Writer` now unconditionally `Send`able.
+
+### Added
+- Better test coverage.
+
+
 ## 0.2.0
 
 New mpmc algorithm. Previous algorithm was based on block write counters - block's

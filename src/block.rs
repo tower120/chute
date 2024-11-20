@@ -1,10 +1,11 @@
 use std::alloc::{alloc, dealloc, handle_alloc_error, Layout};
-use std::{mem, ptr};
+use std::{cmp, mem, ptr};
 use std::cell::UnsafeCell;
 use std::marker::PhantomData;
 use std::mem::{ManuallyDrop, MaybeUninit};
 use std::ops::Deref;
 use std::ptr::{null_mut, NonNull};
+use std::sync::atomic;
 use std::sync::atomic::{AtomicPtr, AtomicU64, AtomicUsize, Ordering};
 use branch_hints::unlikely;
 
@@ -46,6 +47,8 @@ pub(crate) struct Block<T> {
     /// 
     /// It's len for writers. Readers use `bit_blocks` for getting
     /// actual block len.
+    /// 
+    /// Will be >= BLOCK_SIZE after block is fully written.
     // Aligning with cache-line size gives us +10% perf.
     pub len : CacheLineAlign<AtomicUsize>,
     use_count : AtomicUsize,           // When decreases to 0 - frees itself
@@ -93,7 +96,7 @@ impl<T> Block<T>{
         
         // drop mem
         if mem::needs_drop::<T>() {
-            let len = this.as_ref().len.load(Ordering::Acquire);
+            let len = cmp::min(this.as_ref().len.load(Ordering::Acquire), BLOCK_SIZE);
             let mem = this.as_mut().mem.get_mut();
             for i in 0..len {
                 ptr::drop_in_place(mem.get_unchecked_mut(i).assume_init_mut());
@@ -116,6 +119,8 @@ impl<T> Block<T>{
         // Release instead of AcqRel, because we'll drop this at 0
         let prev = this.as_ref().use_count.fetch_sub(1, Ordering::Release);
         if prev == 1 {
+             // See Arc::drop implementation, for this fence rationale.
+            atomic::fence(Ordering::Acquire);
             Self::drop_this(this);
         }
     }

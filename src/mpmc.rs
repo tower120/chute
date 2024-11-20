@@ -207,7 +207,10 @@ impl<T> Drop for Queue<T> {
 pub struct Writer<T> {
     block: BlockArc<T>,
     event_queue: Arc<Queue<T>>
-} 
+}
+
+unsafe impl<T> Send for Writer<T>{}
+
 impl<T> Writer<T> {
     #[inline]
     fn fast_forward_to_last_block(&mut self, max_jumps: usize) -> Result<(), ()> {
@@ -375,6 +378,7 @@ mod test_mpmc{
     use crate::block::BLOCK_SIZE;
     use crate::LendingReader;
     use crate::mpmc::Queue;
+    use crate::test::StringWrapper;
 
     #[test]
     fn test_mpmc() {
@@ -390,14 +394,16 @@ mod test_mpmc{
         
         let mut vec = Vec::new();
         while let Some(value) = reader.next() {
-            //println!("{value}");
             vec.push(value.clone());
         }
         assert_equal(vec, 0..COUNT);
     }
     
-    fn test_mpmc_mt(wt: usize, rt: usize, len: usize) {
-        let queue: Arc<Queue<usize>> = Default::default();
+    fn test_mpmc_mt<Value>(wt: usize, rt: usize, len: usize)
+    where
+        Value: From<usize> + Into<usize> + Clone + 'static,
+    {
+        let queue: Arc<Queue<Value>> = Default::default();
 
         let mut joins = Vec::new();
 
@@ -406,11 +412,11 @@ mod test_mpmc{
         for _ in 0..rt { 
             let mut reader = queue.reader();
             joins.push(std::thread::spawn(move || {
-                let mut sum = 0;
+                let mut sum: usize = 0;
                 let mut i = 0;
                 loop {
                     if let Some(value) = reader.next() {
-                        sum += value;
+                        sum += value.clone().into();
                         
                         i += 1;
                         if i == len {
@@ -428,7 +434,7 @@ mod test_mpmc{
             let mut writer = queue.writer();
             joins.push(std::thread::spawn(move || {
                 for i in t*messages..(t+1)*messages {
-                    writer.push(i);
+                    writer.push(i.into());
                 }
             }));
         }
@@ -449,7 +455,8 @@ mod test_mpmc{
             let wt  = rng.gen_range(1..=MAX_THREADS);
             let rt  = rng.gen_range(1..=MAX_THREADS);
             let len = rng.gen_range(0..RANGE) / wt * wt;
-            test_mpmc_mt(wt, rt, len);
+            test_mpmc_mt::<usize>(wt, rt, len);
+            test_mpmc_mt::<StringWrapper>(wt, rt, len);
         }
     }
 }
