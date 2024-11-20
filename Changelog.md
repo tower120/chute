@@ -1,7 +1,7 @@
 # Changelog
 
 ## 0.2.1
-### Fix
+### Fixed
 - `mpmc` block destructor could go out-of-bounds for `needs_drop` objects.
 
 ### Changed
