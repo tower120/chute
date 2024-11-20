@@ -1,6 +1,6 @@
 [package]
 name = "chute"
-version = "0.2.0"
+version = "0.2.1"
 license = "MIT OR Apache-2.0"
 edition = "2021"
 exclude = ["benchmarks", "doc"]
@@ -16,7 +16,7 @@ branch_hints = "0.4"
 criterion = { version = "0.5", features = ["html_reports"] }
 itertools = "0.13"
 rand = "0.8"
-spin = "0.9.8"
+spin = "0.9"
 arrayvec = "0.7"
 
 [[bench]]
