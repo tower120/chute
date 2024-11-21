@@ -46,8 +46,7 @@ impl<T> Drop for Block<T>{
     fn drop(&mut self) {
         let read_succ = self.read_succ.load(Ordering::Acquire);
         let mem_deallocated = read_succ == BLOCK_SIZE;
-        // This could happen either in the very last block, 
-        // or if the whole queue was dropped.
+        // This could happen if the whole queue was dropped.
         if unlikely(!mem_deallocated) {
             let mem = self.mem_ptr.as_ptr();
             

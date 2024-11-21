@@ -7,7 +7,7 @@ use std::{mem, ptr};
 use std::ptr::NonNull;
 use std::sync::Arc;
 use std::sync::atomic::{fence, Ordering};
-use branch_hints::{unlikely};
+use branch_hints::{likely, unlikely};
 use super::block::{BLOCK_SIZE, Block};
 
 struct QueueSharedData<T>{
@@ -137,9 +137,23 @@ pub struct Reader<T> {
 }
 unsafe impl<T> Send for Reader<T> {}
 
-impl<T: Default + Clone> Reader<T> {
+impl<T> Reader<T> {
     #[inline]
-    pub fn next(&mut self) -> Option<ReadGuard<'_, T>>{
+    fn flush_read_succ(&mut self, read_succ: &mut usize) {
+        let read_succ_value = *read_succ;
+        if likely(read_succ_value > 0) {
+        // TODO: better comparison op?
+        if unlikely(self.block.read_succ.fetch_add(read_succ_value, Ordering::Release) == BLOCK_SIZE - read_succ_value) {
+            // See Arc::drop implementation, for this fence rationale.
+            fence(Ordering::Acquire);
+            unsafe{self.block.dealloc_destructed_mem()};
+        }
+        }
+        *read_succ = 0;
+    }    
+    
+    #[inline]
+    fn read_next_impl(&mut self, read_succ: Option<NonNull<usize>>) -> Option<NonNull<T>> {
         let mut exp = 1;
         let mut read_counter = self.block.read_counter.load(Ordering::Acquire);
         loop{
@@ -168,6 +182,13 @@ impl<T: Default + Clone> Reader<T> {
                             }
                         }
                     };
+                    
+                    // Try flushing active read_succ counter, if requested.
+                    // Will happen only on the first block switch.
+                    if let Some(mut read_succ) = read_succ {
+                        self.flush_read_succ(unsafe{ read_succ.as_mut() });
+                    }
+                    
                     // just read everything again for the new block.
                     read_counter       = next_block.read_counter.load(Ordering::Acquire);
                     self.write_counter = next_block.write_counter.load(Ordering::Acquire);
@@ -193,7 +214,7 @@ impl<T: Default + Clone> Reader<T> {
                         let ptr = self.block.mem_unchecked().add(index);
                         NonNull::new_unchecked(ptr.cast_mut())
                     };
-                    return Some(ReadGuard{ value, block: self.block.as_ref(), phantom_data: Default::default() });
+                    return Some(value);
                 }
                 Err(new_read_counter) => {
                     read_counter = new_read_counter 
@@ -208,6 +229,88 @@ impl<T: Default + Clone> Reader<T> {
             }
         }
     }
+    
+    #[inline]
+    pub fn session(&mut self) -> ReadSession<'_, T>{
+        ReadSession{
+            reader: self,
+            read_succ: 0,
+            phantom_data: Default::default(),
+        }
+    }
+    
+    #[inline]
+    pub fn next(&mut self) -> Option<ReadGuard<'_, T>>{
+        self.read_next_impl(None)
+            .map(|value|ReadGuard{ 
+                value, 
+                block: self.block.as_ref(), 
+                phantom_data: PhantomData 
+            })
+    }
+}
+
+
+pub struct ReadSessionGuard<'a, T>{
+    value: NonNull<T>,
+    read_succ: &'a mut usize,
+    // We own T
+    phantom_data: PhantomData<T>
+}
+impl<'a, T> ReadSessionGuard<'a, T> {
+    #[inline]
+    pub fn take(self) -> T {
+        let mut this = ManuallyDrop::new(self);
+        let value = unsafe{ this.value.read() };
+        *this.read_succ += 1;
+        value
+    }
+}
+impl<'a, T> Deref for ReadSessionGuard<'a, T> {
+    type Target = T;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        unsafe{ self.value.as_ref() }
+    }
+}
+impl<'a, T> DerefMut for ReadSessionGuard<'a, T> {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        unsafe{ self.value.as_mut() }
+    }
+}
+impl<'a, T> Drop for ReadSessionGuard<'a, T> {
+    #[inline]
+    fn drop(&mut self) {
+        unsafe {
+            ptr::drop_in_place(self.value.as_ptr());
+        }
+        *self.read_succ += 1;
+    }
+}
+
+pub struct ReadSession<'a, T>{
+    reader: &'a mut Reader<T>,
+    read_succ: usize,
+    phantom_data: PhantomData<T>
+}
+impl<'a, T> ReadSession<'a, T>{
+    #[inline]
+    pub fn next(&mut self) -> Option<ReadSessionGuard<'_, T>>{
+        self.reader.read_next_impl(Some(NonNull::from(&mut self.read_succ)))
+            .map(|value|ReadSessionGuard{ 
+                value, 
+                read_succ: &mut self.read_succ, 
+                phantom_data: PhantomData 
+            })
+    }
+}
+impl<'a, T> Drop for ReadSession<'a, T>{
+    #[inline]
+    fn drop(&mut self) {
+        self.reader.flush_read_succ(&mut self.read_succ);
+    }
 }
 
 #[cfg(test)]
@@ -220,6 +323,7 @@ mod test {
     fn smoke_test(){
         let mut queue: Queue<usize> = Default::default();
         let mut reader = queue.reader();
+        //let mut reader = reader.session();
         
         const COUNT: usize = BLOCK_SIZE*20;
         for i in 0..COUNT{
@@ -228,7 +332,7 @@ mod test {
         
         let mut vec = Vec::new();
         for _ in 0..COUNT{
-            let value = reader.next().unwrap().clone();
+            let value = reader.session().next().unwrap().clone();
             vec.push(value);
         }
 
@@ -239,9 +343,9 @@ mod test {
     fn spsc_test(){
         let mut queue: Queue<String> = Queue::default();
         
-        const COUNT: usize = BLOCK_SIZE *2 + 32;
+        const COUNT: usize = /*BLOCK_SIZE *2 + 32*/200_000;
         const THREAD_LEFTOVERS: usize = 1;
-        const READ_THREADS: usize = 4;
+        const READ_THREADS: usize = /*4*/2;
         
         let mut out: Arc<spin::Mutex<Vec<String>>> = Default::default();
         let mut joins: ArrayVec<_, 64> = Default::default();
@@ -250,15 +354,16 @@ mod test {
             let mut reader = queue.reader();
             let rt = std::thread::spawn(move || {
                 let mut vec = Vec::new();
+                let mut read_session = reader.session();
                 for _ in 0..COUNT/READ_THREADS - THREAD_LEFTOVERS {
-                    loop{
-                        if let Some(msg) = reader.next(){
-                            vec.push(msg.take());
-                            break;
+                    let msg = loop{                         
+                        if let Some(msg) = read_session.next(){
+                            break msg;
                         } else {
                             std::thread::yield_now();
                         }
-                    }
+                    };
+                    vec.push(msg.take());
                 }
                 out.lock().extend(vec);
             });
