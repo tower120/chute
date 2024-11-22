@@ -8,7 +8,7 @@ use std::sync::atomic::{AtomicBool, AtomicPtr, AtomicU64, AtomicUsize, Ordering}
 use branch_hints::unlikely;
 use crate::block::CacheLineAlign;
 
-pub const BLOCK_SIZE: usize = if cfg!(miri) { 128 } else { 4096/*1024*/ };
+pub const BLOCK_SIZE: usize = if cfg!(miri) { 128 } else { 4096 };
 
 pub type BlockMem<T> = [UnsafeCell<MaybeUninit<T>>; BLOCK_SIZE];
 
@@ -72,6 +72,7 @@ impl<T> Drop for Block<T>{
 impl<T> Block<T>{
     /// Should be called ONCE.
     /// All mem elements must be in destructed state.
+    #[inline]
     pub unsafe fn dealloc_destructed_mem(&self) {
         unsafe{ drop(Box::from_raw(self.mem_ptr.as_ptr())); }
     }

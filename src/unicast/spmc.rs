@@ -1,14 +1,14 @@
 //! Unbounded unicast spmc.
 
 use std::marker::PhantomData;
-use std::mem::{ManuallyDrop};
 use std::ops::{Deref, DerefMut};
-use std::{mem, ptr};
+use std::{cmp, mem};
 use std::ptr::NonNull;
 use std::sync::Arc;
 use std::sync::atomic::{fence, Ordering};
 use branch_hints::{likely, unlikely};
-use super::block::{BLOCK_SIZE, Block};
+use crate::unicast::read_guard::{ReadGuard, ReadSessionGuard/*, SliceReadGuard, SliceReadSessionGuard*/};
+use super::block::{Block, BLOCK_SIZE};
 
 struct QueueSharedData<T>{
     read_block: spin::Mutex<Arc<Block<T>>>,
@@ -23,7 +23,7 @@ pub struct Queue<T> {
 unsafe impl<T> Send for Queue<T> {}
 unsafe impl<T> Sync for Queue<T> {}
 
-impl<T: Default> Default for Queue<T> {
+impl<T> Default for Queue<T> {
     fn default() -> Self {
         let write_block: Arc<Block<T>> = Default::default();
         let write_block_mem = unsafe{ write_block.mem_unchecked().cast_mut() };
@@ -38,6 +38,11 @@ impl<T: Default> Default for Queue<T> {
 }
 
 impl<T> Queue<T> {
+    #[inline]
+    pub fn new() -> Self{
+        Self::default()    
+    }
+    
     #[inline]
     pub fn push(&mut self, value: T) {
         let mut block = self.write_block.deref();
@@ -58,7 +63,8 @@ impl<T> Queue<T> {
         block.write_counter.store(len+1, Ordering::Release);
     }
     
-    pub fn reader(&self) -> Reader<T>{
+    #[inline]
+    pub fn reader(&self) -> Reader<T> {
         let queue_shared_data = self.shared_data.clone(); 
         let block = queue_shared_data.read_block.lock().clone();
         let block_mem = unsafe{ block.mem_unchecked() }; 
@@ -71,70 +77,24 @@ impl<T> Queue<T> {
     }
 }
 
-/// Owning [Queue] message wrapper.
-/// 
-/// # Design choices
-/// 
-/// We could just always return a value, but that would require mempcy for
-/// every read message. With ReadGuard we basically give you a reference, that 
-/// can be [take]n. 
-pub struct ReadGuard<'a, T>{
-    value: NonNull<T>,
-    block: &'a Block<T>,
-    // We own T
-    phantom_data: PhantomData<T>
-}
-impl<'a, T> ReadGuard<'a, T>{
-    #[inline]
-    pub fn mark_readed(&mut self) {
-        if unlikely(self.block.read_succ.fetch_add(1, Ordering::Release) == BLOCK_SIZE-1) {
-            // See Arc::drop implementation, for this fence rationale.
-            fence(Ordering::Acquire);
-            unsafe{self.block.dealloc_destructed_mem()};
-        }
-    }
-    
-    #[inline]
-    pub fn take(self) -> T {
-        let mut this = ManuallyDrop::new(self);
-        let value = unsafe{ this.value.read() };
-        this.mark_readed();
-        value
-    }
-}
-impl<'a, T> Deref for ReadGuard<'a, T>{
-    type Target = T;
-
-    #[inline]
-    fn deref(&self) -> &Self::Target {
-        unsafe{ self.value.as_ref() }
-    }
-}
-impl<'a, T> DerefMut for ReadGuard<'a, T>{
-    #[inline]
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        unsafe{ self.value.as_mut() }
-    }
-}
-impl<'a, T> Drop for ReadGuard<'a, T>{
-    #[inline]
-    fn drop(&mut self) {
-        // 1. Drop value
-        unsafe {
-            ptr::drop_in_place(self.value.as_ptr());
-        }
-        
-        // 2. Drop block's mem, if needed.
-        self.mark_readed();
-    }
-}
-
 pub struct Reader<T> {
     write_counter: usize,
     block: Arc<Block<T>>,
     block_mem: *const T,
     queue_shared_data: Arc<QueueSharedData<T>>,    
 }
+
+impl<T> Clone for Reader<T> {
+    fn clone(&self) -> Self {
+        Self{
+            write_counter: self.write_counter,
+            block: self.block.clone(),
+            block_mem: self.block_mem,
+            queue_shared_data: self.queue_shared_data.clone(),
+        }
+    }
+}
+
 unsafe impl<T> Send for Reader<T> {}
 
 impl<T> Reader<T> {
@@ -152,8 +112,8 @@ impl<T> Reader<T> {
         *read_succ = 0;
     }    
     
-    #[inline]
-    fn read_next_impl(&mut self, read_succ: Option<NonNull<usize>>) -> Option<NonNull<T>> {
+    #[inline(always)]
+    fn read_next_impl(&mut self, n: Option<usize>, read_succ: Option<NonNull<usize>>) -> Option<(NonNull<T>, usize)> {
         let mut exp = 1;
         let mut read_counter = self.block.read_counter.load(Ordering::Acquire);
         loop{
@@ -185,7 +145,7 @@ impl<T> Reader<T> {
                     
                     // Try flushing active read_succ counter, if requested.
                     // Will happen only on the first block switch.
-                    if let Some(mut read_succ) = read_succ {
+                    if /*constexpr*/ let Some(mut read_succ) = read_succ {
                         self.flush_read_succ(unsafe{ read_succ.as_mut() });
                     }
                     
@@ -203,8 +163,12 @@ impl<T> Reader<T> {
                     self.write_counter = write_counter;
                 }
             }
-
-            let result = self.block.read_counter.compare_exchange(read_counter, read_counter+1, 
+            
+            let read_count = /*constexpr*/ match n {
+                None => 1,
+                Some(n) => cmp::min(n, self.write_counter - read_counter)
+            };
+            let result = self.block.read_counter.compare_exchange(read_counter, read_counter+read_count, 
                 Ordering::AcqRel,
                 Ordering::Acquire);
             match result {
@@ -214,7 +178,7 @@ impl<T> Reader<T> {
                         let ptr = self.block.mem_unchecked().add(index);
                         NonNull::new_unchecked(ptr.cast_mut())
                     };
-                    return Some(value);
+                    return Some((value, read_count));
                 }
                 Err(new_read_counter) => {
                     read_counter = new_read_counter 
@@ -222,7 +186,7 @@ impl<T> Reader<T> {
             };
 
             for _ in 0..1<<exp {
-                std::hint::spin_loop();    
+                core::hint::spin_loop();    
             }
             if exp<10 {
                 exp += 1;    
@@ -235,59 +199,30 @@ impl<T> Reader<T> {
         ReadSession{
             reader: self,
             read_succ: 0,
-            phantom_data: Default::default(),
+            phantom_data: PhantomData,
         }
     }
     
     #[inline]
     pub fn next(&mut self) -> Option<ReadGuard<'_, T>>{
-        self.read_next_impl(None)
-            .map(|value|ReadGuard{ 
+        self.read_next_impl(None, None)
+            .map(|(value, _)|ReadGuard{ 
                 value, 
                 block: self.block.as_ref(), 
                 phantom_data: PhantomData 
             })
     }
-}
-
-
-pub struct ReadSessionGuard<'a, T>{
-    value: NonNull<T>,
-    read_succ: &'a mut usize,
-    // We own T
-    phantom_data: PhantomData<T>
-}
-impl<'a, T> ReadSessionGuard<'a, T> {
-    #[inline]
-    pub fn take(self) -> T {
-        let mut this = ManuallyDrop::new(self);
-        let value = unsafe{ this.value.read() };
-        *this.read_succ += 1;
-        value
-    }
-}
-impl<'a, T> Deref for ReadSessionGuard<'a, T> {
-    type Target = T;
-
-    #[inline]
-    fn deref(&self) -> &Self::Target {
-        unsafe{ self.value.as_ref() }
-    }
-}
-impl<'a, T> DerefMut for ReadSessionGuard<'a, T> {
-    #[inline]
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        unsafe{ self.value.as_mut() }
-    }
-}
-impl<'a, T> Drop for ReadSessionGuard<'a, T> {
-    #[inline]
-    fn drop(&mut self) {
-        unsafe {
-            ptr::drop_in_place(self.value.as_ptr());
-        }
-        *self.read_succ += 1;
-    }
+    
+    /*#[inline]
+    pub fn next_n(&mut self, n: usize) -> Option<SliceReadGuard<'_, T>>{
+        self.read_next_impl(Some(n), None)
+            .map(|(start, len)|SliceReadGuard{ 
+                start, 
+                len,
+                block: self.block.as_ref(), 
+                phantom_data: PhantomData 
+            })
+    }*/
 }
 
 pub struct ReadSession<'a, T>{
@@ -298,13 +233,24 @@ pub struct ReadSession<'a, T>{
 impl<'a, T> ReadSession<'a, T>{
     #[inline]
     pub fn next(&mut self) -> Option<ReadSessionGuard<'_, T>>{
-        self.reader.read_next_impl(Some(NonNull::from(&mut self.read_succ)))
-            .map(|value|ReadSessionGuard{ 
+        self.reader.read_next_impl(None, Some(NonNull::from(&mut self.read_succ)))
+            .map(|(value, _)|ReadSessionGuard{ 
                 value, 
                 read_succ: &mut self.read_succ, 
                 phantom_data: PhantomData 
             })
     }
+    
+    /*#[inline]
+    pub fn next_n(&mut self, n: usize) -> Option<SliceReadSessionGuard<'_, T>>{
+        self.reader.read_next_impl(Some(n), Some(NonNull::from(&mut self.read_succ)))
+            .map(|(start, len)|SliceReadSessionGuard{ 
+                start, 
+                len,
+                read_succ: &mut self.read_succ, 
+                phantom_data: PhantomData 
+            })
+    }*/
 }
 impl<'a, T> Drop for ReadSession<'a, T>{
     #[inline]
@@ -343,9 +289,9 @@ mod test {
     fn spsc_test(){
         let mut queue: Queue<String> = Queue::default();
         
-        const COUNT: usize = /*BLOCK_SIZE *2 + 32*/200_000;
+        const COUNT: usize = BLOCK_SIZE*2 + 32;
         const THREAD_LEFTOVERS: usize = 1;
-        const READ_THREADS: usize = /*4*/2;
+        const READ_THREADS: usize = 4;
         
         let mut out: Arc<spin::Mutex<Vec<String>>> = Default::default();
         let mut joins: ArrayVec<_, 64> = Default::default();
