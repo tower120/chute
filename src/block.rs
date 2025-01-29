@@ -78,6 +78,7 @@ impl<T> BlockPool<T> {
             {
                 let block = unsafe { block.as_mut() };
                 data.root = unsafe{ block.block_pool_next_free };
+                data.cap_left += 1;
                 
                 // TODO: is this necessary?
                 //block.block_pool_next_free = None;
