@@ -5,21 +5,24 @@
 use std::marker::PhantomData;
 use std::ptr::{null_mut, NonNull};
 use std::sync::Arc;
-use std::sync::atomic::{AtomicPtr, Ordering};
+use std::sync::atomic::{AtomicPtr, AtomicUsize, Ordering};
 use branch_hints::unlikely;
-use crate::block::{Block, BlockArc, BLOCK_SIZE};
+use crate::block::{Block, BlockArc, BlockPool, BLOCK_SIZE};
 use crate::LendingReader;
 
 pub struct Queue<T> {
     last_block: AtomicPtr<Block<T>>,
+    block_pool: NonNull<BlockPool<T>>,
     phantom_data: PhantomData<T>
 }
 
 impl<T> Default for Queue<T> {
     #[inline]
     fn default() -> Self {
+        let block_pool_ptr = unsafe{ NonNull::new_unchecked(Box::leak(BlockPool::new(2))) };
         Self {
-            last_block: AtomicPtr::new(Block::<T>::new().into_raw().as_ptr()),
+            last_block: AtomicPtr::new(Block::<T>::new(block_pool_ptr).into_raw().as_ptr()),
+            block_pool: block_pool_ptr,
             phantom_data: PhantomData
         }   
     }
@@ -92,8 +95,17 @@ impl<T> Queue<T> {
         // 2. Make new block
         //    +1 counter for EventQueue::last_block (written on unlock_last_block)
         //    +1 counter for Block::next
-        //    +1 counter for returned BlockArc 
-        let new_block = Block::with_counter(3).into_raw();
+        //    +1 counter for returned BlockArc
+        let new_block = 
+        if let Some(mut free_block) = unsafe{ self.block_pool.as_ref().pop() } {
+            unsafe{
+                free_block.as_mut().use_count = AtomicUsize::new(3);
+            }
+            free_block
+        } else {
+            let block_pool_ptr = self.block_pool;
+            Block::with_counter(block_pool_ptr, 3).into_raw()
+        };
 
         // 3. Connect new block with old
         last_block_ref.next.store(new_block.as_ptr(), Ordering::Release);
@@ -131,8 +143,9 @@ impl<T> Queue<T> {
                     // 2. Make new block
                     //    +1 counter for EventQueue::last_block (written on unlock_last_block)
                     //    +1 counter for Block::next
-                    //    +1 counter for returned BlockArc 
-                    let new_block = Block::with_counter(3).into_raw();
+                    //    +1 counter for returned BlockArc
+                    // TODO: use block_pool
+                    let new_block = Block::with_counter(this.block_pool, 3).into_raw();
             
                     // 3. Connect new block with old
                     last_block.next.store(new_block.as_ptr(), Ordering::Release);
@@ -185,10 +198,14 @@ impl<T> Queue<T> {
 impl<T> Drop for Queue<T> {
     #[inline]
     fn drop(&mut self) {
+        // 1. drop blocks.
         let last_block = self.last_block.load(Ordering::Acquire);
         unsafe{
             Block::dec_use_count(NonNull::new_unchecked(last_block));
         }
+        
+        // 2. drop pool
+        unsafe{ drop(Box::from_raw(self.block_pool.as_ptr())); }
     }
 }
 
@@ -384,12 +401,12 @@ mod test_mpmc{
     fn test_mpmc() {
         let queue: Arc<Queue<usize>> = Default::default();
         let mut reader = queue.reader();
-        //let mut writer = queue.writer();
+        let mut writer = queue.writer();
         
         const COUNT: usize = BLOCK_SIZE * 4; 
         for i in 0..COUNT {
-            queue.blocking_push(i);
-            //writer.push(i);    
+            //queue.blocking_push(i);
+            writer.push(i);    
         }
         
         let mut vec = Vec::new();

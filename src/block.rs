@@ -34,6 +34,87 @@ impl<T> Deref for CacheLineAlign<T>{
     }
 }
 
+struct BlockPoolData<T>{
+    root: Option<NonNull<Block<T>>>,
+    cap_left: usize
+}
+
+// TODO: use queue's lock. Pool work with &mut.
+/// ObjectPool of [Block]s.
+pub(crate) struct BlockPool<T> {
+    data: spin::mutex::Mutex<BlockPoolData<T>>,
+}
+
+impl<T> BlockPool<T> {
+    #[inline]
+    pub fn new(cap: usize) -> Box<Self> {
+        Box::new(Self{
+            data: spin::Mutex::new(
+                BlockPoolData{ root: None, cap_left: cap}
+            )
+        })
+    }
+    
+    /// Returns `false` if reached max capacity. 
+    #[inline]
+    pub fn try_push(&self, mut block: NonNull<Block<T>>) -> bool {
+        let mut data = self.data.lock();
+        if data.cap_left == 0 {
+            return false;
+        }
+        data.cap_left -= 1;
+        unsafe{ 
+            block.as_mut().block_pool_next_free = data.root;
+        }
+        data.root = Some(block);
+        true
+    }
+    
+    #[inline]
+    pub fn pop(&self) -> Option<NonNull<Block<T>>> {
+        // TODO: cap_left can be as separate atomic, for fast check. 
+        let mut data = self.data.lock();
+        if let Some(mut block) = data.root.take() {
+            {
+                let block = unsafe { block.as_mut() };
+                data.root = unsafe{ block.block_pool_next_free };
+                
+                // TODO: is this necessary?
+                //block.block_pool_next_free = None;
+
+                // ----
+                drop(data);
+                
+                block.len  = Default::default();
+                block.next = AtomicPtr::new(null_mut());
+                
+                // Is this actually auto-vectorized?                
+                for bit_block in &mut block.bit_blocks {
+                    *bit_block = AtomicU64::new(0);
+                }
+                
+                // TODO: remove should already be 0.
+                //block.use_count = AtomicUsize::new(0);
+            }
+            
+            Some(block)
+        } else {
+            None
+        }
+    }
+}
+
+impl<T> Drop for BlockPool<T> {
+    fn drop(&mut self) {
+        let mut data = self.data.lock();
+        let mut next = &mut data.root;
+        while let Some(mut block) = next.take() {
+            next = unsafe{ &mut block.as_mut().block_pool_next_free };
+            unsafe{ Block::drop_this::<false>(block) };
+        }
+    }
+}
+
 //#[repr(C)]
 pub(crate) struct Block<T> {
     /// # spmc 
@@ -51,8 +132,12 @@ pub(crate) struct Block<T> {
     /// Will be >= BLOCK_SIZE after block is fully written.
     // Aligning with cache-line size gives us +10% perf.
     pub len : CacheLineAlign<AtomicUsize>,
-    use_count : AtomicUsize,           // When decreases to 0 - frees itself
+    // TODO: private
+    pub use_count : AtomicUsize,           // When decreases to 0 - frees itself
     pub next  : AtomicPtr<Self>,
+    
+    block_pool: NonNull<BlockPool<T>>,
+    block_pool_next_free: Option<NonNull<Block<T>>>,
     
     // This is not used in spmc.
     pub bit_blocks: [AtomicU64; BLOCK_SIZE/64],
@@ -61,7 +146,7 @@ pub(crate) struct Block<T> {
 
 impl<T> Block<T>{
     #[must_use]
-    pub fn with_counter(counter: usize) -> BlockArc<T> {
+    pub fn with_counter(block_pool: NonNull<BlockPool<T>>, counter: usize) -> BlockArc<T> {
         unsafe{
             let layout = Layout::new::<Self>();
             let ptr = alloc(layout) as *mut Self;
@@ -73,6 +158,9 @@ impl<T> Block<T>{
             (*ptr).use_count = AtomicUsize::new(counter);
             (*ptr).next = AtomicPtr::new(null_mut());
             
+            (*ptr).block_pool = block_pool;
+            (*ptr).block_pool_next_free = None;
+            
             (*ptr).bit_blocks = core::array::from_fn(|_|AtomicU64::new(0)); 
         
             BlockArc::from_raw(NonNull::new_unchecked(ptr))
@@ -80,8 +168,8 @@ impl<T> Block<T>{
     }
     
     #[must_use]
-    pub fn new() -> BlockArc<T> {
-        Self::with_counter(1)
+    pub fn new(block_pool: NonNull<BlockPool<T>>) -> BlockArc<T> {
+        Self::with_counter(block_pool, 1)
     }
     
     #[inline]
@@ -91,7 +179,7 @@ impl<T> Block<T>{
     
     #[inline(never)]
     #[cold]
-    unsafe fn drop_this(mut this: NonNull<Self>){
+    unsafe fn drop_this<const DROP_NEXT: bool>(mut this: NonNull<Self>){
         debug_assert!(this.as_ref().use_count.load(Ordering::Acquire) == 0);
         
         // drop mem
@@ -104,9 +192,11 @@ impl<T> Block<T>{
         }
         
         // drop next
-        let next = this.as_ref().next.load(Ordering::Acquire);
-        if let Some(next) = NonNull::new(next) {
-            Block::dec_use_count(next);
+        if DROP_NEXT {
+            let next = this.as_ref().next.load(Ordering::Acquire);
+            if let Some(next) = NonNull::new(next) {
+                Block::dec_use_count(next);
+            }
         }
         
         // dealloc
@@ -115,13 +205,19 @@ impl<T> Block<T>{
     }
     
     #[inline]
-    pub unsafe fn dec_use_count(this: NonNull<Self>) {
+    pub unsafe fn dec_use_count(mut this: NonNull<Self>) {
         // Release instead of AcqRel, because we'll drop this at 0
         let prev = this.as_ref().use_count.fetch_sub(1, Ordering::Release);
         if prev == 1 {
              // See Arc::drop implementation, for this fence rationale.
             atomic::fence(Ordering::Acquire);
-            Self::drop_this(this);
+            
+            // Move to object pool
+            let in_pool = this.as_mut().block_pool.as_mut().try_push(this);
+            if !in_pool {
+                // Pool is full - drop immediately.
+                Self::drop_this::<true>(this);
+            }
         }
     }
     
@@ -160,7 +256,7 @@ impl<T> Block<T>{
             let mem = self.mem().cast_mut();
             mem.add(index).write(value);
         }
-
+        
         // Update bitblock, indicating that value is ready to read.
         {
             let bit_block_index = index / 64;

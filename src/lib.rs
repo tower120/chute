@@ -43,7 +43,7 @@
 mod block;
 
 pub mod mpmc;
-pub mod spmc;
+//pub mod spmc;
 
 mod reader;
 pub use reader::*;
