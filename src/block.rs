@@ -79,9 +79,6 @@ impl<T> BlockPool<T> {
                 let block = unsafe { block.as_mut() };
                 data.root = unsafe{ block.block_pool_next_free };
                 data.cap_left += 1;
-                
-                // TODO: is this necessary?
-                //block.block_pool_next_free = None;
 
                 // ----
                 drop(data);
@@ -93,9 +90,6 @@ impl<T> BlockPool<T> {
                 for bit_block in &mut block.bit_blocks {
                     *bit_block = AtomicU64::new(0);
                 }
-                
-                // TODO: remove should already be 0.
-                //block.use_count = AtomicUsize::new(0);
             }
             
             Some(block)
@@ -111,7 +105,7 @@ impl<T> Drop for BlockPool<T> {
         let mut next = &mut data.root;
         while let Some(mut block) = next.take() {
             next = unsafe{ &mut block.as_mut().block_pool_next_free };
-            unsafe{ Block::drop_this::<false>(block) };
+            unsafe{ Block::drop_this(block) };
         }
     }
 }
@@ -178,9 +172,9 @@ impl<T> Block<T>{
         this.as_ref().use_count.fetch_add(1, Ordering::Relaxed);
     }
     
-    #[inline(never)]
-    #[cold]
-    unsafe fn drop_this<const DROP_NEXT: bool>(mut this: NonNull<Self>){
+    /*#[inline(never)]
+    #[cold]*/
+    unsafe fn drop_this(mut this: NonNull<Self>){
         debug_assert!(this.as_ref().use_count.load(Ordering::Acquire) == 0);
         
         // drop mem
@@ -189,14 +183,6 @@ impl<T> Block<T>{
             let mem = this.as_mut().mem.get_mut();
             for i in 0..len {
                 ptr::drop_in_place(mem.get_unchecked_mut(i).assume_init_mut());
-            }
-        }
-        
-        // drop next
-        if DROP_NEXT {
-            let next = this.as_ref().next.load(Ordering::Acquire);
-            if let Some(next) = NonNull::new(next) {
-                Block::dec_use_count(next);
             }
         }
         
@@ -209,15 +195,24 @@ impl<T> Block<T>{
     pub unsafe fn dec_use_count(mut this: NonNull<Self>) {
         // Release instead of AcqRel, because we'll drop this at 0
         let prev = this.as_ref().use_count.fetch_sub(1, Ordering::Release);
-        if prev == 1 {
+        if unlikely(prev == 1) {
              // See Arc::drop implementation, for this fence rationale.
             atomic::fence(Ordering::Acquire);
+
+            // TODO: make a loop - we theoretically can have stackoverflow here. 
+            // at first decrement next.use_count
+            {
+                let next = this.as_ref().next.load(Ordering::Relaxed);
+                if let Some(next) = NonNull::new(next) {
+                    Block::dec_use_count(next);
+                }
+            }
             
             // Move to object pool
             let in_pool = this.as_mut().block_pool.as_mut().try_push(this);
             if !in_pool {
                 // Pool is full - drop immediately.
-                Self::drop_this::<true>(this);
+                Self::drop_this(this);
             }
         }
     }
