@@ -102,9 +102,9 @@ impl<T> BlockPool<T> {
 impl<T> Drop for BlockPool<T> {
     fn drop(&mut self) {
         let mut data = self.data.lock();
-        let mut next = &mut data.root;
+        let mut next = data.root;
         while let Some(mut block) = next.take() {
-            next = unsafe{ &mut block.as_mut().block_pool_next_free };
+            next = unsafe{ block.as_mut().block_pool_next_free };
             unsafe{ Block::drop_this(block) };
         }
     }
