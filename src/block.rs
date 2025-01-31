@@ -177,15 +177,6 @@ impl<T> Block<T>{
     unsafe fn drop_this(mut this: NonNull<Self>){
         debug_assert!(this.as_ref().use_count.load(Ordering::Acquire) == 0);
         
-        // drop mem
-        if mem::needs_drop::<T>() {
-            let len = cmp::min(this.as_ref().len.load(Ordering::Acquire), BLOCK_SIZE);
-            let mem = this.as_mut().mem.get_mut();
-            for i in 0..len {
-                ptr::drop_in_place(mem.get_unchecked_mut(i).assume_init_mut());
-            }
-        }
-        
         // dealloc
         let layout = Layout::new::<Self>();
         dealloc(this.as_ptr().cast(), layout);
@@ -207,6 +198,15 @@ impl<T> Block<T>{
                     Block::dec_use_count(next);
                 }
             }
+            
+            // drop mem
+            if mem::needs_drop::<T>() {
+                let len = cmp::min(this.as_ref().len.load(Ordering::Acquire), BLOCK_SIZE);
+                let mem = this.as_mut().mem.get_mut();
+                for i in 0..len {
+                    ptr::drop_in_place(mem.get_unchecked_mut(i).assume_init_mut());
+                }
+            }             
             
             // Move to object pool
             let in_pool = this.as_mut().block_pool.as_mut().try_push(this);
