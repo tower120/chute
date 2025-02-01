@@ -2,6 +2,8 @@
 //! 
 //! Thread-safe lockless writers and readers.
 
+mod unordered_reader;
+
 use std::marker::PhantomData;
 use std::ptr::{null_mut, NonNull};
 use std::sync::Arc;
@@ -9,6 +11,7 @@ use std::sync::atomic::{AtomicPtr, Ordering};
 use branch_hints::unlikely;
 use crate::block::{Block, BlockArc, BLOCK_SIZE};
 use crate::LendingReader;
+use crate::mpmc::unordered_reader::UnorderedReader;
 
 pub struct Queue<T> {
     last_block: AtomicPtr<Block<T>>,
@@ -181,6 +184,23 @@ impl<T> Queue<T> {
             bitblock_index: block_len/64
         }
     }
+    
+    /// TODO: Description
+    #[must_use]
+    #[inline]
+    pub fn unordered_reader(&self) -> UnorderedReader<T> {
+        let last_block = self.load_last_block();
+        let block_len  = last_block.len.load(Ordering::Acquire);
+        let bitblock_index = block_len/64; 
+        UnorderedReader {
+            block: last_block,
+            bitblock: 0,
+            bitblock_mask: u64::MAX,
+            index_offset: bitblock_index*64,
+            bitblock_index,
+        }
+    }
+    
 }
 impl<T> Drop for Queue<T> {
     #[inline]
@@ -410,7 +430,8 @@ mod test_mpmc{
         // Readers
         let control_sum = (0..len).sum();        
         for _ in 0..rt { 
-            let mut reader = queue.reader();
+            // TODO: test both Reader and UnorderedReader 
+            let mut reader = queue./*reader()*/unordered_reader();
             joins.push(std::thread::spawn(move || {
                 let mut sum: usize = 0;
                 let mut i = 0;
