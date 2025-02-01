@@ -196,7 +196,6 @@ impl<T> Queue<T> {
             block: last_block,
             bitblock: 0,
             bitblock_mask: u64::MAX,
-            index_offset: bitblock_index*64,
             bitblock_index,
         }
     }
