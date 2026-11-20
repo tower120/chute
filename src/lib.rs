@@ -19,6 +19,21 @@
 //!
 //! The read performance is almost equal, with a slight advantage for [spmc].
 //!
+//! # [`Send`] + [`Sync`] / [`Clone`] requirement
+//!
+//! Your `T` is required to be [`Sync`] to use [`LendingReader`].
+//!
+//! Or [`Clone`] to use `CloningReader`. You can get `CloningReader` from `Reader`:
+//! ```
+//! # let queue: chute::spmc::Queue<usize> = Default::default();
+//! // Reader that conditionally implements LendingReader for T: Sync.
+//! let lending_reader = queue.reader();
+//! // Cloning reader that implements Iterator for T: Clone.
+//! let cloning_reader = lending_reader.cloned();
+//! ```
+//!
+//! Also `T` must be [`Send`] in order for readers/writers to be [`Send`]able.
+//!
 //! # Order
 //!
 //! [spmc] is fully ordered.
