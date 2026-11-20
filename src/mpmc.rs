@@ -389,7 +389,8 @@ impl<T: Sync> LendingReader for Reader<T> {
     }
 }
 
-/// Reader that clones upon return. Does not require item to be [`Sync`].
+/// Reader that clones upon return. Does not require item to be [`Sync`]. [`Iterator`].
+#[derive(Clone)]
 pub struct CloningReader<T: Clone>{
     reader: Reader<T>
 }
