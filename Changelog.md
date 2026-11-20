@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+### Fixed
+- `mpmc`, `spmc` parts was too Send-permissive. It is now Send only when T: Send
+
+### Added
+- `mpmc`, `spmc` parts now implement Sync, if T: Send.
+
 ## 0.2.1
 ### Fixed
 - `mpmc` block destructor could go out-of-bounds for `needs_drop` objects.
@@ -15,7 +22,7 @@
 
 New mpmc algorithm. Previous algorithm was based on block write counters - block's
 len is updated when counter reaches 0. New one is based on bitblocks - each element
-in block, have corresponding bit, and it is raised when write finished. The Number 
+in block, have corresponding bit, and it is raised when write finished. The Number
 of continuously raised bits is block's len. This ensures that readers will see their
 messages ASAP, while maintaining message order. This requires less atomic stores
 on the writer's side as well, so it is almost 30% faster!
@@ -30,7 +37,7 @@ See [how it works](doc/how_it_works.md#atomic-bitblocks-v020).
 ### Added
 
 - Readers now `Clone`able.
-- MIRI-friendly fuzzy testing. 
+- MIRI-friendly fuzzy testing.
 
 ## 0.1.1
 
