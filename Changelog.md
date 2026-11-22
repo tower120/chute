@@ -1,11 +1,17 @@
 # Changelog
 
-## Unreleased
-### Fixed
-- `mpmc`, `spmc` parts was too Send-permissive. It is now Send only when T: Send
+## Unreleased 0.3.0
+Send/Sync soundness fix.
 
-### Added
-- `mpmc`, `spmc` parts now implement Sync, if T: Send.
+### Fixed
+- `mpmc`, `spmc` parts was too Send-permissive.
+
+### Changed
+- `LendingReader` trait changed to `LendingIterator`. API changed.
+- Common `ClonedReader` replaced with `CloningReader`s in `mpmc`, `spmc`.
+- All writers now require `Send` to be `Send`+ `Sync`.
+- `LendingReader`s require `Sync` to be `Send`+ `Sync`.
+- `CloningReader`s require `Send`+`Clone` to be `Send`+ `Sync`.
 
 ## 0.2.1
 ### Fixed
