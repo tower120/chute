@@ -1,8 +1,8 @@
 //! Write from multiple threads, read from multiple threads.
-//! 
+//!
 //! Example from readme
 
-use chute::LendingReader;
+use chute::LendingIterator;
 
 fn main() {
     const WRITERS         : usize = 4;
@@ -10,7 +10,7 @@ fn main() {
     const MESSAGES        : usize = WRITERS*WRITER_MESSAGES;
     const READERS         : usize = 4;
     let queue = chute::mpmc::Queue::new();
-    
+
     std::thread::scope(|s| {
         // READ threads
         for _ in 0..READERS {
@@ -26,18 +26,18 @@ fn main() {
                     };
                     sum += msg;
                 }
-                
+
                 assert_eq!(sum, (0..MESSAGES).sum());
             });
-        }        
-        
+        }
+
         // WRITE threads
         for t in 0..WRITERS {
             let mut writer = queue.writer();
             s.spawn(move || {
                 for i in 0..WRITER_MESSAGES {
                     writer.push(t*WRITER_MESSAGES + i);
-                }             
+                }
             });
         }
     });
