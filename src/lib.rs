@@ -19,20 +19,30 @@
 //!
 //! The read performance is almost equal, with a slight advantage for [spmc].
 //!
-//! # [`Send`] + [`Sync`] / [`Clone`] requirement
+//! # [`Sync`] / [`Send`] + [`Clone`] requirements
 //!
-//! Your `T` is required to be [`Sync`] to use [`LendingReader`].
+//! Your `T` is required to be [`Sync`] to be usable with [`LendingReader`]
+//! in other threads.
 //!
-//! Or [`Clone`] to use `CloningReader`. You can get `CloningReader` from `Reader`:
+//! Or [`Send`] + [`Clone`] to be usable with [`CloningReader`].
+//! You can get [`CloningReader`] from [`LendingReader`] before sending
+//! it to another thread:
 //! ```
-//! # let queue: chute::spmc::Queue<usize> = Default::default();
-//! // Reader that conditionally implements LendingReader for T: Sync.
-//! let lending_reader = queue.reader();
-//! // Cloning reader that implements Iterator for T: Clone.
-//! let cloning_reader = lending_reader.cloned();
+//! # use chute::spmc::*;
+//! let queue: Queue<usize> = Default::default();
+//! let lending_reader: LendingReader<_> = queue.reader();
+//! let cloning_reader: CloningReader<_> = lending_reader.cloned();
 //! ```
 //!
-//! Also `T` must be [`Send`] in order for readers/writers to be [`Send`]able.
+//! Also `T` must be [`Send`] in order for writers to be [`Send`]/[`Sync`]-able.
+//!
+//! # [`LendingIterator`] -> [`Iterator`]
+//!
+//! [`LendingReader`] is [`LendingIterator`], while [`CloningReader`] is [`Iterator`].
+//! You may want to use [`CloningReader`] purely for ergonomic reasons.
+//!
+//! [`LendingReader`]: spmc::LendingReader
+//! [`CloningReader`]: spmc::CloningReader
 //!
 //! # Order
 //!
@@ -60,8 +70,8 @@ mod block;
 pub mod mpmc;
 pub mod spmc;
 
-mod reader;
-pub use reader::*;
+mod lending_iterator;
+pub use lending_iterator::*;
 
 #[cfg(test)]
 mod tests;

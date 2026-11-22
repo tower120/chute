@@ -2,7 +2,7 @@ use std::sync::Arc;
 use rand::{Rng, SeedableRng};
 use crate::block::BLOCK_SIZE;
 use crate::spmc::Queue;
-use crate::LendingReader;
+use crate::LendingIterator;
 use super::StringWrapper;
 
 fn test_spmc_mt<Value>(rt: usize, len: usize)
@@ -59,3 +59,24 @@ fn fuzzy_spmc(){
         test_spmc_mt::<StringWrapper>(rt, len);
     }
 }
+
+/* #[test]
+fn soundness_test1() {
+    let rc = std::rc::Rc::new(());
+    let mut queue = crate::spmc::Queue::new();
+    queue.push(rc.clone());
+    let t = std::thread::spawn(move || drop(queue));
+    drop(rc);
+    t.join().unwrap();
+} */
+
+/* #[test]
+fn soundness_test2() {
+    let mut queue = crate::spmc::Queue::new();
+    let mut a = queue.reader();
+    let mut b = a.clone();
+    queue.push(std::cell::Cell::new(0));
+    let t = std::thread::spawn(move || b.next().unwrap().set(1));
+    a.next().unwrap().set(2);
+    t.join().unwrap();
+} */

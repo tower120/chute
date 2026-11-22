@@ -8,7 +8,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicPtr, Ordering};
 use branch_hints::unlikely;
 use crate::block::{Block, BlockArc, BLOCK_SIZE};
-use crate::LendingReader;
+use crate::LendingIterator;
 
 pub struct Queue<T> {
     last_block: AtomicPtr<Block<T>>,
@@ -174,10 +174,10 @@ impl<T> Queue<T> {
     /// [Reader] will receive all messages that are pushed AFTER this call.
     #[must_use]
     #[inline]
-    pub fn reader(&self) -> Reader<T> {
+    pub fn reader(&self) -> LendingReader<T> {
         let last_block = self.load_last_block();
         let block_len  = last_block.len.load(Ordering::Acquire);
-        Reader {
+        LendingReader {
             block: last_block,
             index: block_len,
             len:   block_len,
@@ -291,20 +291,20 @@ impl<T> Writer<T> {
     }
 }
 
-/// Queue consumer.
+/// Queue consumer. [`LendingIterator`].
 ///
 /// Constructed by [Queue::reader()].
-pub struct Reader<T>{
+pub struct LendingReader<T>{
     pub(crate) block: BlockArc<T>,
     pub(crate) index: usize,
     pub(crate) len  : usize,
     pub(crate) bitblock_index  : usize,
 }
 
-unsafe impl<T: Send> Send for Reader<T>{}
-unsafe impl<T: Send> Sync for Reader<T>{}
+unsafe impl<T: Sync> Send for LendingReader<T>{}
+unsafe impl<T: Sync> Sync for LendingReader<T>{}
 
-impl<T> Clone for Reader<T> {
+impl<T> Clone for LendingReader<T> {
     #[inline]
     fn clone(&self) -> Self {
         Self{
@@ -316,7 +316,7 @@ impl<T> Clone for Reader<T> {
     }
 }
 
-impl<T> Reader<T> {
+impl<T> LendingReader<T> {
     #[inline]
     fn next_impl(&mut self) -> Option<&T> {
         if self.index == self.len {
@@ -380,7 +380,7 @@ impl<T> Reader<T> {
     }
 }
 
-impl<T: Sync> LendingReader for Reader<T> {
+impl<T> LendingIterator for LendingReader<T> {
     type Item = T;
 
     #[inline]
@@ -389,10 +389,15 @@ impl<T: Sync> LendingReader for Reader<T> {
     }
 }
 
-/// Reader that clones upon return. Does not require item to be [`Sync`]. [`Iterator`].
+/// Cloning queue consumer. [`Iterator`].
+///
+/// Requires [`Send`]+[`Clone`] instead of [`Sync`] (in [`LendingReader`]) -
+/// to be [`Send`]+[`Sync`].
+///
+/// Constructed by [`LendingReader::cloned()`].
 #[derive(Clone)]
 pub struct CloningReader<T: Clone>{
-    reader: Reader<T>
+    reader: LendingReader<T>
 }
 impl<T: Clone> Iterator for CloningReader<T>{
     type Item = T;
@@ -403,5 +408,5 @@ impl<T: Clone> Iterator for CloningReader<T>{
     }
 }
 
-unsafe impl<T: Clone + Send> Send for CloningReader<T>{}
-unsafe impl<T: Clone + Send> Sync for CloningReader<T>{}
+unsafe impl<T: Send + Clone> Send for CloningReader<T>{}
+unsafe impl<T: Send + Clone> Sync for CloningReader<T>{}

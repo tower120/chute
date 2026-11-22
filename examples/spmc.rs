@@ -1,12 +1,12 @@
 //! Write from one thread, read from multiple threads.
 
-use chute::LendingReader;
+use chute::LendingIterator;
 
 fn main() {
     const MESSAGES : usize = 400;
     const READERS  : usize = 4;
     let mut queue = chute::spmc::Queue::new();
-    
+
     std::thread::scope(|s| {
         // READ threads
         for _ in 0..READERS {
@@ -22,16 +22,16 @@ fn main() {
                     };
                     sum += msg;
                 }
-                
+
                 assert_eq!(sum, (0..MESSAGES).sum());
             });
-        }        
-        
+        }
+
         // WRITE thread
         s.spawn(|| {
             for i in 0..MESSAGES {
                 queue.push(i);
-            }             
+            }
         });
     });
 }

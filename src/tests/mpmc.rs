@@ -3,7 +3,7 @@ use itertools::assert_equal;
 use rand::{Rng, SeedableRng};
 use super::StringWrapper;
 use crate::block::BLOCK_SIZE;
-use crate::LendingReader;
+use crate::LendingIterator;
 use crate::mpmc::Queue;
 
 #[test]
