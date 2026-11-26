@@ -1,9 +1,9 @@
 name: coverage
 
-on: 
+on:
   workflow_dispatch:
   push:
-    
+
 jobs:
   coverage:
     runs-on: ubuntu-latest
@@ -12,17 +12,17 @@ jobs:
       uses: taiki-e/install-action@v2
       with:
         tool: cargo-tarpaulin
-        
+
     - name: Checkout repository
-      uses: actions/checkout@v4
-      
+      uses: actions/checkout@v7
+
     - name: Generate code coverage
       run:
         RUSTFLAGS="-Copt-level=0"
         cargo tarpaulin --all-features --out xml
 
     - name: Upload to codecov.io
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v7
       with:
         token: ${{secrets.CODECOV_TOKEN}}
-        fail_ci_if_error: true    
+        fail_ci_if_error: true

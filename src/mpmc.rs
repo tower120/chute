@@ -171,7 +171,7 @@ impl<T> Queue<T> {
         }
     }
 
-    /// [Reader] will receive all messages that are pushed AFTER this call.
+    /// Reader will receive all messages that are pushed AFTER this call.
     #[must_use]
     #[inline]
     pub fn reader(&self) -> LendingReader<T> {
