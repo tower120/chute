@@ -17,6 +17,12 @@ jobs:
     - uses: actions/checkout@v7
     - run: RUSTFLAGS="--deny warnings" cargo build
 
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v7
+    - run: RUSTFLAGS="--deny warnings" cargo doc --all-features
+
   examples:
     runs-on: ubuntu-latest
     steps:
