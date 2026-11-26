@@ -14,13 +14,19 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
     - run: RUSTFLAGS="--deny warnings" cargo build
+
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v7
+    - run: RUSTFLAGS="--deny warnings" cargo doc --all-features
 
   examples:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4    
+    - uses: actions/checkout@v7
     - run: RUSTFLAGS="--deny warnings" cargo build --examples
 
   test:
@@ -29,16 +35,16 @@ jobs:
     - uses: dtolnay/rust-toolchain@nightly
     - uses: taiki-e/install-action@v2
       with:
-        tool: cargo-careful      
-    - uses: actions/checkout@v4
+        tool: cargo-careful
+    - uses: actions/checkout@v7
     - run: cargo +nightly careful test
 
   miri:
     runs-on: ubuntu-latest
-    steps:    
+    steps:
     - uses: dtolnay/rust-toolchain@nightly
       with:
         toolchain: nightly
-        components: miri      
-    - uses: actions/checkout@v4      
+        components: miri
+    - uses: actions/checkout@v7
     - run: cargo +nightly miri test

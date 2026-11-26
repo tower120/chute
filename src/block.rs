@@ -103,7 +103,9 @@ impl<T> Block<T>{
             }
         }
 
-        // drop next
+        // drop next (this may chain drop with recursive calls).
+        // TODO: We probably should manually unroll drop chain in order to prevent
+        //       potential stack-overflow due to recursive calls.
         let next = this.as_ref().next.load(Ordering::Acquire);
         if let Some(next) = NonNull::new(next) {
             Block::dec_use_count(next);
